@@ -29,93 +29,6 @@ conf_password() {
 	done
 }
 
-
-#### Package Configuration
-### Package Configurations for Enviroments
-## Plasma KDE Configuration
-conf_plasma_complete() {
-	yay -S --needed --noconfirm - < /pkgLists/desktopLists/plasmaPkgs.txt
-}
-
-## Gnome Configuration
-conf_gnome_complete() {
-	yay -S --needed --noconfirm - < /pkgLists/desktopLists/gnomePkgs.txt
-}
-
-## XFCE Configuration
-conf_xfce_complete() {
-	yay -S --needed --noconfirm - < /pkgLists/desktopLists/xfcePkgs.txt
-}
-
-conf_sway_complete() {
-	yay -S --needed --noconfirm - < /pkgLists/desktopLists/swayPkgs.txt
-	if lshw -C display | grep "NVIDIA"; then
-			yay -S --needed --noconfirm sway-nvidia
-	fi
-}
-
-## Awesome Configuration
-conf_awesome_complete() {
-	yay -S --needed --noconfirm - < /pkgLists/desktopLists/awesomePkgs.txt
-}
-
-### Package Configuratino for Userspace
-## Base Configuration
-conf_base() {
-	yay -S --needed --noconfirm - < /pkgLists/softwareLists/basePkgs.txt
-}
-
-## Editing Configuration
-conf_editing() {
-	yay -S --needed --noconfirm - < /pkgLists/softwareLists/editingPkgs.txt
-}
-
-## Flatpaks Configuration
-conf_flatpak() {
-	yay -S flatpak
-	yay -S --needed --noconfirm - < /pkgLists/softwareLists/flatpakPkgs.txt
-}
-
-## Office Configuration
-conf_office() {
-	yay -S --needed --noconfirm - < /pkgLists/softwareLists/officePkgs.txt
-}
-
-## Printing Configuration
-conf_print() {
-	yay -S --needed --noconfirm - < /pkgLists/softwareLists/printPkgs.txt
-}
-
-## Programming Configuration
-conf_programming() {
-	yay -S --needed --noconfirm - < /pkgLists/softwareLists/programmingPkgs.txt
-	cat /pkgLists/softwareLists/vscExt.txt | while read VSC_EXTENSIONS || [[ -n $VSC_EXTENSIONS ]];
-	do
-		code --install-extension $VSC_EXTENSIONS --force
-	done
-}
-
-
-
-## Multimedia Configuration
-conf_multimedia() {
-	yay -S --needed --noconfirm - < /pkgLists/softwareLists/multimediaPkgs.txt
-}
-
-## Gaming Configuration
-conf_gaming() {
-	yay -S --needed --noconfirm - < /pkgLists/softwareLists/gamingPkgs.txt
-}
-
-
-
-	'Base'				'Browser, Editor, File manager, Calculator etc.' 	on 	\
-	'Office' 			'Mailclient, Office suite, Calendar, Printing'		off \
-	'Programming' 		'IDEs, Tools, Language support' 					off \
-	'Editing' 			'Photo-, Video-, Audiotools' 						off \
-	'Multimedia' 		'RSS-Client, Videoclient, Mediaplayer' 				off \
-	'Gaming' 			'Steam, Lutris, Heroic'		
-
 conf_timeshift_setup() {
 	
 }
@@ -238,19 +151,20 @@ installation_guide() {
 	## Detect CPU Microcode
 	if lscpu | grep "AMD"; then
 			echo "Add amd-ucode to installation query, because AMD CPU has been found..."
-			CHOOSEN_INSTALL_PACAKGES+=" amd-ucode"
+			CPU_MICROCODE="amd-ucode"
 		elif lscpu | grep "Intel"; then
 			echo "Add intel-ucode to installation query, because Intel CPU has been found..."
-			CHOOSEN_INSTALL_PACAKGES+=" intel-ucode vulkan-intel"
+			CPU_MICROCODE="intel-ucode"
 		else
 			whiptail --title "Hardware Configuration" --msgbox "Unknown CPU-Architektur detected. Continue installation without Microcode." 32 128 3>&1 1>&2 2>&3
+			CPU_MICROCODE="amd-ucode intel-ucode"
 	fi
 
 	## Detect GPU
 	if lshw -C display | grep "AMD"; then
 			echo "Add AMD-driver to installation query, because AMD GPU has been found..."
-			CHOOSEN_INSTALL_LISTS+=" amdHardwarePkgs.txt"
-			EXECUTING_CMDS+=("sed -i 's/MODULES=(ext4)/MODULES=(ext4 amdgpu)/g' /etc/mkinitcpio.conf")
+			GPU_DRIVER="pkgLists/driverLists/amdGpuPkgs.txt"
+			MODULES_DRIVER="sed -i 's/MODULES=(ext4)/MODULES=(ext4 amdgpu)/g' /etc/mkinitcpio.conf"
 		elif lshw -C display | grep "NVIDIA"; then
 			CHOOSEN_NVIDIA_DRIVER=$(whiptail --title "Nvidia driver selection" --menu "Do you want to use proprietary or open-source drivers for your Nvidia card?" 32 128 2 \
 			"Proprietary" "Much better performance" \
@@ -258,12 +172,12 @@ installation_guide() {
 			echo $CHOOSEN_NVIDIA_DRIVER
 			if [ $CHOOSEN_NVIDIA_DRIVER == "Proprietary" ]; then
 					echo "Add proprietary nvidia driver to installation query..."
-					CHOOSEN_INSTALL_LISTS+=" nvidiaClosedHardwarePkgs.txt"
-					EXECUTING_CMDS+=("sed -i 's/MODULES=(ext4)/MODULES=(ext4 nvidia nvidia_modeset nvidia_uvm nvidia_drm)/g' /etc/mkinitcpio.conf")
+					GPU_DRIVER="pkgLists/driverLists/nvidiaClosedGpuPkgs.txt"
+					MODULES_DRIVER="sed -i 's/MODULES=(ext4)/MODULES=(ext4 nvidia nvidia_modeset nvidia_uvm nvidia_drm)/g' /etc/mkinitcpio.conf"
 				else
 					echo "Add open-source nvidia driver to installation query..."
-					CHOOSEN_INSTALL_LISTS+=" nvidiaOpenHardwarePkgs.txt"
-					EXECUTING_CMDS+=("sed -i 's/MODULES=(ext4)/MODULES=(ext4 nouveau)/g' /etc/mkinitcpio.conf")
+					GPU_DRIVER="pkgLists/driverLists/nvidiaOpenGpuPkgs.txt"
+					MODULES_DRIVER="sed -i 's/MODULES=(ext4)/MODULES=(ext4 nouveau)/g' /etc/mkinitcpio.conf"
 			fi
 		else
 			whiptail --title "Hardware Configuration" --msgbox "Unknown GPU detected. Continue installation without GPU-Drivers" 32 128 3>&1 1>&2 2>&3
@@ -274,7 +188,8 @@ installation_guide() {
 	echo "Hostname: $HOSTNAME"
 
 	## Define language (For German: LANG=de_DE.UTF-8)
-	LANG=$()
+	#LANG=$()
+	LANG="LANG=de_DE.UTF-8"
 	echo "System language: $LANG"
 
 	## Define locals (For German:
@@ -285,10 +200,12 @@ installation_guide() {
 	echo "System locals: $LOCALS"
 
 	## Define keymap (For German: KEYMAP=de-latin)
-	KEYMAP=$()
+	#KEYMAP=$()
+	KEYMAP="KEYMAP=de-latin"
 
 	## Define timezone (For German: ln -sf /usr/share/zoneinfo/Europe/Berlin /etc/localtime)
-	TIMEZONE=$()
+	#TIMEZONE=$()
+	TIMEZONE="/usr/share/zoneinfo/Europe/Berlin"
 
 	### User Configuration
 
@@ -320,76 +237,30 @@ installation_guide() {
 	3>&1 1>&2 2>&3)
 	echo $CHOOSEN_USERSPACE
 
-	for i in ${CHOOSEN_USERSPACE[@]}
-	do
-		case $i in
-			Plasma)
-			echo "Add Plasma to installation query..."
-			CHOOSEN_INSTALL_PACAKGES_CMDS+=()
-			;;
-			Gnome)
-			echo "Add Gnome to installation query..."
-			CHOOSEN_INSTALL_LISTS+=" gnomePkgsList.txt"
-			;;
-			XFCE)
-			echo "Add XFCE to installation query..."
-			CHOOSEN_INSTALL_LISTS+=" xfcePkgsList.txt"
-			;;
-			Sway)
-			echo "Add Sway to installation query..."
-			CHOOSEN_INSTALL_LISTS+=" swayPkgsList.txt"
-			;;
-			AwesomeWM)
-			echo "Add Awesome WM to installation query..."
-			CHOOSEN_INSTALL_LISTS+=" awesomePkgsList.txt"
-			;;
-		esac
-	done
-	echo $CHOOSEN_INSTALL_LISTS
+	## Configuration of Login-Manager
+	CHOOSEN_LOGINMANAGER=$(whiptail --title "Package Selection" --radiolist "Which Login-Manager do you want to use?" 32 128 3 \
+	'SDDM'		'' 	on 	\
+	'GDM' 		'' 	off \
+	'LightDM' 	'' 	off \
+	3>&1 1>&2 2>&3)
+	echo $CHOOSEN_LOGINMANAGER
 
 	## Configuration of user specific packages
-	CHOOSEN_USERPACKAGES=$(whiptail --title "Package Selection" --checklist --separate-output "Which desktop environment or window manager do you want to install?" 32 128 6 \
+	CHOOSEN_USERPACKAGES=$(whiptail --title "Package Selection" --checklist --separate-output "Which desktop environment or window manager do you want to install?" 32 128 12 \
 	'Base'				'Browser, Editor, File manager, Calculator etc.' 	on 	\
-	'Office' 			'Mailclient, Office suite, Calendar, Printing'		off \
-	'Programming' 		'IDEs, Tools, Language support' 					off \
 	'Editing' 			'Photo-, Video-, Audiotools' 						off \
-	'Multimedia' 		'RSS-Client, Videoclient, Mediaplayer' 				off \
+	'Flatpaks'			'Flatpaksupport, Discord, Fluentreader'				off	\
 	'Gaming' 			'Steam, Lutris, Heroic'								off \
+	'Multimedia' 		'RSS-Client, Videoclient, Mediaplayer' 				off \
+	'Office' 			'Mailclient, Office suite, Calendar, Printing'		off \
+	'Printing'			'CUPS, Scantools'									off \
+	'Privacy'			'Tor, Onineshare, Anonymous Messanger etc.'			off	\
+	'Programming' 		'IDEs, Tools, Language support' 					off \
+	'Server'			'WebDAV, Nextcloud, PiHole, Jellyfin, Invidious'	off	\
+	'Tools'				'Some usefull stuff'								off \
+	'VM'				'Virtualisation, QEMU, Libvirt'						off	\
 	3>&1 1>&2 2>&3)
 	echo $CHOOSEN_USERPACKAGES
-
-	for i in ${CHOOSEN_USERPACKAGES[@]}
-	do
-		case $i in
-			"Base")
-			echo "Add Base to installation query..."
-			CHOOSEN_INSTALL_LISTS+=" basePkgsList.txt"
-			;;
-			"Office")
-			echo "Add Office to installation query..."
-			CHOOSEN_INSTALL_LISTS+=" officePkgsList.txt"
-			;;
-			"Programming")
-			echo "Add Programming to installation query..."
-			CHOOSEN_INSTALL_LISTS+=" programmingPkgsList.txt"
-			;;
-			"Editing")
-			echo "Add Editing to installation query..."
-			CHOOSEN_INSTALL_LISTS+=" editingPkgsList.txt"
-			;;
-			"Multimedia")
-			echo "Add Multimedia to installation query..."
-			CHOOSEN_INSTALL_LISTS+=" multimediaPkgsList.txt"
-			;;
-			"Gaming")
-			echo "Add Gaming to installation query..."
-			CHOOSEN_INSTALL_LISTS+=" gamingPkgsList.txt"
-			;;
-		esac
-	done
-	echo $CHOOSEN_INSTALL_LISTS
-
-
 
 	###
 	### ---- End: Configuration of the system ----
@@ -400,6 +271,7 @@ installation_guide() {
 
 	if [[ $? -eq 0 ]]; then
 			whiptail --title "Final Information" --msgbox "When the process is done, the computer should reboot automatically. Please do not power off or disconnect your computer from the network during the process." 32 128 3>&1 1>&2 2>&3
+			
 			###
 			### ---- Start: Executing of the installation ----
 			###
@@ -409,76 +281,209 @@ installation_guide() {
 
 			### Hardware Configuration
 
+			## Install core packages
+			pacstrap /mnt - < pkgLists/systemLists/corePkgs.txt
+
+			# Generate fstab
+			genfstab -Lp /mnt > /mnt/etc/fstab
+
+			
+
 			### System Configuration
 
 			## Enable sudo without password for user(s) during installation
-			EDITOR=vim
-			sed -i 's/#%wheel ALL=(ALL:ALL) NOPASSWD: ALL/%wheel ALL=(ALL:ALL) NOPASSWD: ALL/g' /etc/sudors
-
-			## Enable multilib
-			sed -i '/^#\[multilib]/{n;s/^#//}' /etc/pacman.conf
-			sed -i '/^#\[multilib]/{s/^#//}' /etc/pacman.conf
-			pacman -Syyu --noconfirm
-
-			## Install packages
-
-			## Set mkinitcpio.conf
-
-
-
+			arch-chroot /mnt/ EDITOR=vim
+			sed -i 's/#%wheel ALL=(ALL:ALL) NOPASSWD: ALL/%wheel ALL=(ALL:ALL) NOPASSWD: ALL/g' /mnt/etc/sudors
 
 			## Set hostname
-			echo $HOSTNAME > /etc/hostname
+			echo $HOSTNAME > /mnt/etc/hostname
 
 			## Set language
-			echo $LANG > /etc/locale.conf
+			echo $LANG > /mnt/etc/locale.conf
 
 			## Set locals
-			# sed -i 's/#de_DE.UTF-8 UTF-8/de_DE.UTF-8 UTF-8/g' /etc/locale.gen
-			# sed -i 's/#de_DE ISO-8859-1 /de_DE ISO-8859-1 /g' /etc/locale.gen
-			# sed -i 's/#de_DE@euro ISO-8859-15 /de_DE@euro ISO-8859-15 /g' /etc/locale.gen)
+			sed -i 's/#de_DE.UTF-8 UTF-8/de_DE.UTF-8 UTF-8/g' /mnt/etc/locale.gen
+			sed -i 's/#de_DE ISO-8859-1 /de_DE ISO-8859-1 /g' /mnt/etc/locale.gen
+			sed -i 's/#de_DE@euro ISO-8859-15 /de_DE@euro ISO-8859-15 /g' /mnt/etc/locale.gen)
 
 			## Set keymap
-			echo $KEYMAP > /etc/vconsole.conf
+			echo $KEYMAP > /mnt/etc/vconsole.conf
 
 			## Set timezone
-			ln -sf $TIMEZONE /etc/localtime
-			timedatectl set-local-rtc 0 # set hardware clock
+			ln -sf $TIMEZONE /mnt/etc/localtime
+			arch-chroot /mnt/ timedatectl set-local-rtc 0 # set hardware clock
 
 			## Generate localisation settings
-			locale-gen
-
+			arch-chroot /mnt/ locale-gen
 
 			### User Configuration
 
 			## Set Root password
-			sudo sh -c "echo root:'$ROOTPASS' | chpasswd"
+			arch-chroot /mnt/ sudo sh -c "echo root:'$ROOTPASS' | chpasswd"
 
 			## Create User with password
-			USERNAME=$(whiptail --title "Create User" --inputbox "Choose your username (only lowercase letters, numbers and no spaces or special characters)" 32 128 3>&1 1>&2 2>&3)
-			USERPASS=$(conf_password)
-			useradd -m -G users,wheel -s /bin/bash -p $(openssl passwd -1 $USERPASS) $USERNAME
+			arch-chroot /mnt/ useradd -m -G users,wheel -s /bin/bash -p $(openssl passwd -1 $USERPASS) $USERNAME
 
-			## Install packages
-			yay -Syyu $CHOOSEN_INSTALL_LISTS
+			## Enable multilib
+			sed -i '/^#\[multilib]/{n;s/^#//}' /mnt/etc/pacman.conf
+			sed -i '/^#\[multilib]/{s/^#//}' /mnt/etc/pacman.conf
+			arch-chroot /mnt/ pacman -Syyu --noconfirm
+
+			## Install yay package manager
+			mkdir /mnt/tmp/build
+			cd /mnt/tmp/build
+			arch-chroot /mnt/ git clone https://aur.archlinux.org/yay.git
+			arch-chroot /mnt/ chown -R $USERNAME /tmp/build
+			arch-chroot /mnt/ cd yay
+			arch-chroot /mnt/ sudo -u $USERNAME makepkg -si --noconfirm
+	
+			## Install CPU Microcode
+			arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm $CPU_MICROCODE
+
+			## Install / Set GPU Driver
+			arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm $GPU_DRIVER
+			$MODULES_DRIVER
+
+			## Install Compositor /  Window System
+			arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/systemLists/waylandPkgs.txt
+			arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/systemLists/x11Pkgs.txt
+
+			## Install Userspace
+			for i in ${CHOOSEN_USERSPACE[@]}
+			do
+				case $i in
+					Plasma)
+						echo "Add Plasma to installation query..."
+						arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/desktopLists/plasmaPkgs.txt
+					;;
+					Gnome)
+						echo "Add Gnome to installation query..."
+						arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/desktopLists/gnomePkgs.txt
+					;;
+					XFCE)
+						echo "Add XFCE to installation query..."
+						arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/desktopLists/xfcePkgs.txt
+					;;
+					Sway)
+						echo "Add Sway to installation query..."
+						arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/desktopLists/swayPkgs.txt
+						if lshw -C display | grep "NVIDIA"; then
+								arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm sway-nvidia
+						fi
+					;;
+					AwesomeWM)
+						echo "Add Awesome WM to installation query..."
+						arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/desktopLists/awesomePkgs.txt
+					;;
+				esac
+			done
+
+			## Install / Set Login-Manager
+			if [ $CHOOSEN_LOGINMANAGER == "SDDM" ]; then
+					echo "Set LightDM as Login-Manager..."
+					arch-chroot /mnt/ systemctl enable sddm
+				elif [ $CHOOSEN_LOGINMANAGER == "GDM" ]; then
+					echo "Set LightDM as Login-Manager..."
+					arch-chroot /mnt/ systemctl enable gdm
+				elif [ $CHOOSEN_LOGINMANAGER == "LightDM" ]; then
+					echo "Set LightDM as Login-Manager..."
+					arch-chroot /mnt/ systemctl enable lightdm
+			fi
+
+			## Install Userspace PKGs
+			for i in ${CHOOSEN_USERPACKAGES[@]}
+			do
+				case $i in
+					"Base")
+						echo "Add Base to installation query..."
+						arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/softwareLists/basePkgs.txt
+					;;
+					"Editing")
+						echo "Add Editing to installation query..."
+						arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/softwareLists/editingPkgs.txt
+					;;
+					"Flatpaks")
+						echo "Add Flatpaks to installation query..."
+						arch-chroot /mnt/ sudo -u $USERNAME yay -S flatpak
+						#arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/softwareLists/flatpakPkgs.txt
+					;;
+					"Gaming")
+						echo "Add Gaming to installation query..."
+						arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/softwareLists/gamingPkgs.txt
+					;;
+					"Multimedia")
+						echo "Add Multimedia to installation query..."
+						arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/softwareLists/multimediaPkgs.txt
+					;;
+					"Office")
+						echo "Add Office to installation query..."
+						arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/softwareLists/officePkgs.txt
+					;;
+					"Printing")
+						echo "Add Printing to installation query..."
+						arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/softwareLists/printPkgs.txt
+					;;
+					"Privacy")
+						echo "Add Privacy to installation query..."
+						arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/softwareLists/privacyPkgs.txt
+					;;
+					"Programming")
+						echo "Add Programming to installation query..."
+						arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/softwareLists/programmingPkgs.txt
+						#cat pkgLists/softwareLists/vscExt.txt | while read VSC_EXTENSIONS || [[ -n $VSC_EXTENSIONS ]];
+						#do
+						#	code --install-extension $VSC_EXTENSIONS --force
+						#done
+					;;
+					"Server")
+						echo "Add Server to installation query..."
+						arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/softwareLists/serverPkgs.txt
+					;;
+					"Tools")
+						echo "Add Toosl to installation query..."
+						arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/softwareLists/toolsPkgs.txt
+					;;
+					"VM")
+						echo "Add VM to installation query..."
+						arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/softwareLists/vmPkgs.txt
+						sed -i 's/#unix_sock_group = "libvirt"/unix_sock_group = "libvirt"/g' /mnt/etc/libvirt/libvirtd.conf
+						sed -i 's/#unix_sock_rw_perms = "0770"/unix_sock_rw_perms = "0770"/g' /mnt/etc/libvirt/libvirtd.conf
+						arch-chroot /mnt/ gpasswd -a $USERNAME libvirt
+						arch-chroot /mnt/ systemctl enable libvirtd
+					;;	
+				esac
+			done
 
 			## Enable system services
+			systemctl enable firewalld
+			systemctl enable cpupower
+			
+			
+			systemctl enable watchdog
+			systemctl enable httpd
+			systemctl enable cups
+			systemctl enable tlp
+			#systemctl enable snapd
+			systemctl enable bluetooth
+			#systemctl enable samba
+			#systemctl enable avahi-daemon
 
 			## Setup Firewalld as system wide firewall
 
-
+			## Generate mkinitcpio.conf
 
 
 
 
 			## Change sudo for user(s) to normal
-			sed -i 's/%wheel ALL=(ALL:ALL) NOPASSWD: ALL/#%wheel ALL=(ALL:ALL) NOPASSWD: ALL/g' /etc/sudors
-			sed -i 's/#%wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/g' /etc/sudors
+			sed -i 's/%wheel ALL=(ALL:ALL) NOPASSWD: ALL/#%wheel ALL=(ALL:ALL) NOPASSWD: ALL/g' /mnt/etc/sudors
+			sed -i 's/#%wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/g' /mnt/etc/sudors
 
 			## Reboot system
 			whiptail --title "Installation is complete" --yesno "Restart computer?)" 32 128 3>&1 1>&2 2>&3
 
 			if [[ $? -eq 0 ]]; then
+					umount -a
 					systemctl reboot --now
 				elif [[ $? -eq 1 ]]; then
 					whiptail --title "MESSAGE" --msgbox "Cancelling Process since user pressed <NO>. Returned to shell." 32 128 3>&1 1>&2 2>&3

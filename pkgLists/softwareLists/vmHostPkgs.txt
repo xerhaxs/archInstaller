@@ -1,6 +1,8 @@
 dnsmasq
 lxc
 lxd
+podman
+podman-compose
 qemu-full
 swtpm
 virt-manager

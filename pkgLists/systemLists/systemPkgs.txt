@@ -8,11 +8,13 @@ cifs-utils
 cpupower
 gvim 
 libebur128
+libpamac-full-git
 lsp-plugins
 networkmanager-openvpn
 nlohmann-json
 nm-connection-editor
 ntfs-3g
+pamac-all-git
 powerline
 pv
 rclone-browser
