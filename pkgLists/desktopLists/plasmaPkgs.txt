@@ -30,6 +30,7 @@ kde-gtk-config
 kde-service-menu-encfs
 kde-service-menu-reimage
 kde-servicemenus-backupit
+kde-servicemenus-clamtkscan
 kde-servicemenus-officeconverter
 kde-servicemenus-pdf
 kdeconnect

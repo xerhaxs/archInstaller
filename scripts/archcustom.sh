@@ -216,17 +216,6 @@ installation_guide() {
 	USERNAME=$(whiptail --title "Create User" --inputbox "Choose your username (only lowercase letters, numbers and no spaces or special characters)" 32 128 3>&1 1>&2 2>&3)
 	USERPASS=$(conf_password)
 
-	## Choose packages for the system
-	whiptail --title "Choosing packages" --yesno "Do you want to install a minimal system without Desktop environment, Window Manager or other non stock programs?" 32 128 3>&1 1>&2 2>&3
-
-	if [[ $? -eq 0 ]]; then
-
-		elif [[ $? -eq 1 ]]; then
-			whiptail --title "MESSAGE" --msgbox "Cancelling Process since user pressed <NO>." 32 128 3>&1 1>&2 2>&3
-		elif [[ $? -eq 255 ]]; then
-			whiptail --title "MESSAGE" --msgbox "User pressed ESC. Exiting the script" 32 128 3>&1 1>&2 2>&3
-	fi
-
 	## Configuration of the Desktop environment / Window Manager
 	CHOOSEN_USERSPACE=$(whiptail --title "Package Selection" --checklist --separate-output "Which desktop environment or window manager do you want to install?" 32 128 5 \
 	'Plasma'		'X11 + Wayland' 	off \
@@ -262,6 +251,14 @@ installation_guide() {
 	3>&1 1>&2 2>&3)
 	echo $CHOOSEN_USERPACKAGES
 
+	whiptail --title "Package Selection" --yesno "Do you want to install portable device optimizations like TLP for longer battery life?" 32 128 3>&1 1>&2 2>&3
+	
+	if [[ $? -eq 0 ]]; then
+			BATTERY_OPTIMIZATION=true
+		else
+			BATTERY_OPTIMIZATION=false
+	fi
+
 	###
 	### ---- End: Configuration of the system ----
 	###
@@ -272,6 +269,7 @@ installation_guide() {
 	if [[ $? -eq 0 ]]; then
 			whiptail --title "Final Information" --msgbox "When the process is done, the computer should reboot automatically. Please do not power off or disconnect your computer from the network during the process." 32 128 3>&1 1>&2 2>&3
 			
+
 			###
 			### ---- Start: Executing of the installation ----
 			###
@@ -286,7 +284,6 @@ installation_guide() {
 
 			# Generate fstab
 			genfstab -Lp /mnt > /mnt/etc/fstab
-
 			
 
 			### System Configuration
@@ -348,6 +345,18 @@ installation_guide() {
 			arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/systemLists/waylandPkgs.txt
 			arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/systemLists/x11Pkgs.txt
 
+			## Install System Packages
+			arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/systemLists/systemPkgs.txt
+			arch-chroot /mnt/ systemctl enable firewalld
+			arch-chroot /mnt/ systemctl enable watchdog
+
+			## Install Battery optimizations for portable devices
+			if [ $BATTERY_OPTIMIZATION == true ]; then
+					arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/driverLists/laptopPkgs.txt
+					arch-chroot /mnt/ systemctl enable cpupower
+					arch-chroot /mnt/ systemctl enable tlp
+			fi
+			
 			## Install Userspace
 			for i in ${CHOOSEN_USERSPACE[@]}
 			do
@@ -422,6 +431,7 @@ installation_guide() {
 					"Printing")
 						echo "Add Printing to installation query..."
 						arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/softwareLists/printPkgs.txt
+						arch-chroot /mnt/ systemctl enable cups
 					;;
 					"Privacy")
 						echo "Add Privacy to installation query..."
@@ -438,6 +448,9 @@ installation_guide() {
 					"Server")
 						echo "Add Server to installation query..."
 						arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/softwareLists/serverPkgs.txt
+						arch-chroot /mnt/ systemctl enable httpd
+						arch-chroot /mnt/ systemctl enable samba
+						arch-chroot /mnt/ systemctl enable avahi-daemon
 					;;
 					"Tools")
 						echo "Add Toosl to installation query..."
@@ -455,32 +468,27 @@ installation_guide() {
 			done
 
 			## Enable system services
-			systemctl enable firewalld
-			systemctl enable cpupower
 			
-			
-			systemctl enable watchdog
-			systemctl enable httpd
-			systemctl enable cups
-			systemctl enable tlp
+
 			#systemctl enable snapd
 			systemctl enable bluetooth
-			#systemctl enable samba
-			#systemctl enable avahi-daemon
+
 
 			## Setup Firewalld as system wide firewall
+			
 
 			## Generate mkinitcpio.conf
+			if 
 
 
-
+			arch-chroot /mnt/ mkinitcpio -p linux
 
 			## Change sudo for user(s) to normal
 			sed -i 's/%wheel ALL=(ALL:ALL) NOPASSWD: ALL/#%wheel ALL=(ALL:ALL) NOPASSWD: ALL/g' /mnt/etc/sudors
 			sed -i 's/#%wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/g' /mnt/etc/sudors
 
 			## Reboot system
-			whiptail --title "Installation is complete" --yesno "Restart computer?)" 32 128 3>&1 1>&2 2>&3
+			whiptail --title "Installation is complete" --yesno "Restart computer?" 32 128 3>&1 1>&2 2>&3
 
 			if [[ $? -eq 0 ]]; then
 					umount -a

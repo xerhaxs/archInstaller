@@ -1,11 +1,10 @@
 alsa
 archiso
-avahi
 backintime
 calf
 cantarell-fonts
 cifs-utils
-cpupower
+clamtk
 gvim 
 libebur128
 libpamac-full-git

@@ -9,6 +9,7 @@ gnome-themes-extra
 gnome-applets
 gnome-appfolders-manager
 gnome-disk-utility
+clamtk-gnome
 gnome-shell-extensions
 gnome-shell-extension-appindicator
 gnome-shell-extension-gsconnect
