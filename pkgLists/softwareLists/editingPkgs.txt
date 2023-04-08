@@ -1,0 +1,5 @@
+blender
+gimp
+kdenlive
+krita
+soundkonverter

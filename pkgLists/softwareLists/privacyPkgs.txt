@@ -1,0 +1,8 @@
+element-desktop
+gnunet
+monero-gui
+onionshare
+session-desktop-bin
+torbrowser-launcher
+xmrig
+xmrig-cuda

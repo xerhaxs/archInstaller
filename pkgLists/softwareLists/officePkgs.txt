@@ -1,0 +1,14 @@
+hunspell-de
+hunspell-en_gb
+hunspell-en_us
+hyphen-de
+hyphen-en
+kile
+languagetool
+latex
+libreoffice-still
+libreoffice-still-de
+libreoffice-extension-languagetool
+mythes-de
+mythes-en
+xournalpp

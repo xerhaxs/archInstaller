@@ -1,0 +1,6 @@
+mesa
+lib32-mesa
+xf86-video-intel
+vulkan-intel
+lib32-vulkan-intel
+intel-gpu-tools

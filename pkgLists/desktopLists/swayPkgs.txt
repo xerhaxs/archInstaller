@@ -1,0 +1,13 @@
+sway
+swaybg
+swayidle
+swaylock
+wf-recorder
+way-accel-rotate-git
+sway-alttab-bin
+sway-audio-idle-inhibit-git
+swaylock-blur-multimonitor-git
+swaysettings-git
+xdg-desktop-portal
+xdg-desktop-portal-gtk
+xdg-desktop-portal-wlr

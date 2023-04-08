@@ -1,0 +1,9 @@
+Catppuccin.catppuccin-vsc
+davidlday.languagetool-linter
+James-Yu.latex-workshop
+Misodee.vscode-nbt
+MS-CEINTL.vscode-language-pack-de
+SPGoding.datapack-language-server
+streetsidesoftware.code-spell-checker
+streetsidesoftware.code-spell-checker-german
+zaaack.markdown-editor

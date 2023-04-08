@@ -1,0 +1,13 @@
+intellij-idea-community-edition
+jdk-openjdk
+jdk8-openjdk
+nmap
+nodejs
+npm
+pycharm-community-edition
+qtcreator
+rpi-imager-bin
+rust-analyzer
+rustup
+umbrello
+vscodium-bin

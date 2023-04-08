@@ -1,0 +1,7 @@
+dnsmasq
+lxc
+lxd
+qemu-full
+swtpm
+virt-manager
+virtio-win

@@ -1,0 +1,15 @@
+barrier
+cdrdao
+dvd+rw-tools
+edex-ui-bin
+electronmail-bin
+ghostwriter
+k3b
+keyboard-center
+kiwix-desktop
+kiwix-tools
+kmymoney
+open-numismat-bin
+openrgb-bin
+qtqr
+vdhcoapp-bin

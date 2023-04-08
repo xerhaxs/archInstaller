@@ -1,0 +1,10 @@
+aribb24
+aribb25
+clementine
+dl_image
+freetube-bin
+libdvdcss
+mediathekview
+mplayer
+mpv 
+vlc
