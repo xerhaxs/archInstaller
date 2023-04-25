@@ -1,0 +1,55 @@
+
+
+
+
+jhead
+perl-image-exiftool
+
+plasma-gamemode-git
+gnome-shell-extension-gamemode-git
+
+
+
+snapd
+snapd-glib
+
+
+
+
+
+
+Linux Virenscanner
+
+whiptail --title "Kernel and System configuration" --menu "Which Kernel option do you prefer?" 32 128 4 \
+	"Basic" 	"Everything will be installed on one partition. No security modules or special modifications. Normal Kernel." \
+	"Zen" 		"Everything will be installed on one partition. The Zen-Kernel will be used." \
+	"LTS"		"Everything will be installed on one partition. The LTS-Kernel will be used." \
+	"Hardened"	"The system will be a Fort Nox for your data. The system will be installed with SeLinux, Full Diks Encryption etc." 3>&1 1>&2 2>&3
+
+
+
+	if [ $CHOOSEN_SYSTEM_TYPE == "Basic" ]; then
+			KERNEL="linux linux-headers"
+			EXECUTING_CMDS+=("" "")
+		elif [ $CHOOSEN_SYSTEM_TYPE == "Zen" ]; then
+			KERNEL="linux-zen linux-zen-headers"
+			EXECUTING_CMDS+=("" "")
+		elif [ $CHOOSEN_SYSTEM_TYPE == "LTS" ]; then
+			KERNEL="linux-lts linux-lts-headers"
+			EXECUTING_CMDS+=("" "")
+		elif [ $CHOOSEN_SYSTEM_TYPE == "Hardened" ]; then
+			KERNEL="linux-hardened linux-hardened-headers"
+			CHOOSEN_INSTALL_LISTS+=()
+			EXECUTING_CMDS+=("" "")
+		else
+			whiptail --title "MESSAGE" --msgbox "User pressed ESC. Exiting the script" 32 128 3>&1 1>&2 2>&3
+	fi
+
+
+
+    SELECTED=$(whiptail --title "Choose Only One Package" --radiolist \
+"List of packages" 20 100 10 \
+"chrome" "browser" OFF \
+"pip3" "Python package manager" OFF \
+"ksnip" "Screenshot tool" OFF \
+"virtualbox" "virtualization software" OFF 3>&1 1>&2 2>&3)
