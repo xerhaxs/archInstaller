@@ -1,1 +1,15 @@
 papirus-icon-theme
+sddm-catppuccin-git
+catppuccin-kde-theme-git
+catppuccin-gtk-theme-mocha
+catppuccin-gtk-theme-macchiato
+catppuccin-gtk-theme-frappe
+catppuccin-gtk-theme-latte
+lightly-git
+
+
+ln -sf ”/usr/share/themes/Catppuccin-Mocha-Standard-Mauve-Dark/gtk-4.0/assets” ”/usr/share/gtk-4.0/assets”
+ln -sf "/usr/share/themes/Catppuccin-Mocha-Standard-Mauve-Dark/gtk-4.0/gtk.css” "/usr/share/gtk-4.0/gtk.css”
+ln -sf "/usr/share/themes/Catppuccin-Mocha-Standard-Mauve-Dark/gtk-4.0/gtk-dark.css” "/usr/share/gtk-4.0/gtk-dark.css”
+
+

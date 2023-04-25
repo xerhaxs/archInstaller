@@ -2,4 +2,6 @@ blender
 gimp
 kdenlive
 krita
+inkscape
+tenacity-git
 soundkonverter

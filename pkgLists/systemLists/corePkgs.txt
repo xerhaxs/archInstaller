@@ -3,6 +3,7 @@ base-devel
 dosfstools
 gptfdisk
 lvm2
+lshw
 linux
 linux-firmware
 dhcp

@@ -1,3 +1,4 @@
 cpupower
 tlp
 tlpui
+i2c-tools

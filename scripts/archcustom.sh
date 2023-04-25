@@ -65,6 +65,7 @@ if [[ $? -eq 0 ]]; then
 		*)
 			whiptail --title "ERROR - Unsupported system detected!" --yesno "Your system is not officially supported by this script. It is not recommended to run this script on not officially supported systems, as it can cause damage to your installed systems or it might not work properly. If you decide to run this script anyway - you have been warned! Do you want to continue?" 32 128 3>&1 1>&2 2>&3
 			if [[ $? -eq 0 ]]; then
+				pacman -Syyu hwinfo git wget
 				installation_guide
 			elif [[ $? -eq 1 ]]; then
 				whiptail --title "MESSAGE" --msgbox "Cancelling Process since user pressed <NO>." 32 128 3>&1 1>&2 2>&3
@@ -81,6 +82,15 @@ fi
 
 ## Installation guide
 installation_guide() {
+
+	## Set keymap for installation
+	KBD_OPTIONS=()
+	while IFS= read -r KBD_LINE; do
+		KBD_OPTIONS+=("$KBD_LINE" "")
+	done < <(localectl list-x11-keymap-layouts)
+	CHOOSEN_KBD_LAYOUT=$(whiptail --title "Keyboard Layout" --menu "Pick your keyboard layout (This keyboard layout will only be used during the installation process.)" 32 128 16 "${KBD_OPTIONS[@]}" 3>&1 1>&2 2>&3)
+	loadkeys $CHOOSEN_KBD_LAYOUT
+
 	## Kernel and system configuration
 	CHOOSEN_SYSTEM_TYPE=$(whiptail --title "Kernel and System configuration" --menu "Which Kernel option do you prefer?" 32 128 4 \
 	"Basic" 	"Everything will be installed on one partition. No security modules or special modifications. Normal Kernel." \
@@ -105,47 +115,24 @@ installation_guide() {
 	fi
 
 	## Drive configuration and disk formatting
-	DRIVES=$(lsblk | grep disk)
-	echo $DRIVES
+	DISKS=$(lsblk | grep disk | awk '{print $1}')
 
-	IFS=$(echo -en "\n\b")
-	$DRIVES | while IFS= read -r line ; do
-		echo "$line"
+	DISK_OPTIONS=()
+	for DISK in $DISKS; do
+		DISK_SIZE=$(lsblk "/dev/$DISK" | grep disk | awk '{print $4}')
+		DISK_OPTIONS+=("Disk: /dev/$DISK" "Size: $DISK_SIZE")
 	done
 
+	CHOOSEN_DRIVE=$(whiptail --title "Menu selected Drive" --menu "Where should Arch Linux be installed?" 32 128 16 "${DISK_OPTIONS[@]}" 3>&1 1>&2 2>&3)
 
-	lsblk | grep disk | {
-	while IFS= read -r ROW; do
-			echo "$ROW"
-			ROW_COUNT=$((ROW_COUNT+1))
-		done
-		echo "There were $ROW_COUNT rows."
-		echo "$ROW"
-	}
+	echo "Choosen Disk: $CHOOSEN_DRIVE"
 
-	CHOOSEN_DRIVE=$(whiptail --title "Disk for Arch Linux" --menu "Where should Arch Linux be installed?" 32 128 $ROW_COUNT \
-
-	)
+	parted $CHOOSEN_DRIVE mklabel gpt \
+		mkpart primary fat32 1MiB 512MiB \
+		set 1 esp on \
+		mkpart primary ext4 512MiB 100%
 
 
-	lsblk | grep disk
-
-
-			dd if=/dev/zero of $DRIVE status==progress
-		sgdisk -o
-		sgdisk -n 0:0:+512M --t 0:ef00 -c 0:boot $DRIVE
-		sgdisk -n 0:0:0 --t 0:8300 -c 0:root $DRIVE
-
-
-
-
-
-
-
-
-
-	## Set keymap for installation
-	loadkeys de
 
 
 	## Detect CPU Microcode
@@ -187,10 +174,67 @@ installation_guide() {
 	HOSTNAME=$(whiptail --title "Set Hostname" --inputbox "Choose the Hostname of the computer." 32 128 3>&1 1>&2 2>&3)
 	echo "Hostname: $HOSTNAME"
 
+
+
+
+
+
 	## Define language (For German: LANG=de_DE.UTF-8)
 	#LANG=$()
 	LANG="LANG=de_DE.UTF-8"
 	echo "System language: $LANG"
+
+	LOCALE_FILE="locale.gen"
+
+	LOCALE_OPTIONS=()
+	LOCALE_LINE_COUNT=0
+	while IFS= read -r LINE
+	do
+		((LOCALE_LINE_COUNT++))
+		if [ $LOCALE_LINE_COUNT -le 17 ] ; then
+			continue
+		fi
+		# Prüfen, ob die Zeile mit einem # beginnt
+		if [[ "$LINE" == "#"* ]] ; then
+			# Option mit "off" hinzufügen
+			LOCALE_OPTIONS+=("${LINE:1}" "" off)
+		else
+			# Option mit "on" hinzufügen
+			LOCALE_OPTIONS+=("$LINE" "" on)
+		fi
+	done < "$LOCALE_FILE"
+
+	# Whiptail-Checkliste anzeigen und Auswahl speichern
+	CHOOSEN_LOCALS=$(whiptail --title "Textoptionen" --checklist "Wählen Sie die gewünschten Optionen:" 15 50 5 "${LOCALE_OPTIONS[@]}" 3>&1 1>&2 2>&3)
+
+	# Ausgewählte Optionen ausgeben
+	echo "Sie haben folgende Optionen ausgewählt: $CHOOSEN_LOCALS"
+
+	# Optionen für Whiptail-Checkliste erstellen
+	OPTIONS=()
+	while IFS= read -r LINE
+	do
+		# Check if line starts with a #
+		if [[ "$LINE" == \#* ]] ; then
+			# Check if the option is selected
+			if [[ "$LINE" == *\#${CHOOSEN_LOCALS}\#* ]] ; then
+				# Remove # from the line and add to options
+				LINE="${LINE:1}"
+			else
+				continue
+			fi
+		else
+			# Check if the option is not selected
+			if [[ "$LINE" == *\#${CHOOSEN_LOCALS}\#* ]] ; then
+				LINE="${LINE:2}"
+			else
+				LINE="# $LINE"
+			fi
+		fi
+		OPTIONS+=("$LINE")
+	done < "$LOCALE_FILE"
+
+	
 
 	## Define locals (For German:
 	# sed -i 's/#de_DE.UTF-8 UTF-8/de_DE.UTF-8 UTF-8/g' /etc/locale.gen
@@ -207,6 +251,12 @@ installation_guide() {
 	#TIMEZONE=$()
 	TIMEZONE="/usr/share/zoneinfo/Europe/Berlin"
 
+
+
+
+
+
+
 	### User Configuration
 
 	## Root password
@@ -217,7 +267,7 @@ installation_guide() {
 	USERPASS=$(conf_password)
 
 	## Configuration of the Desktop environment / Window Manager
-	CHOOSEN_USERSPACE=$(whiptail --title "Package Selection" --checklist --separate-output "Which desktop environment or window manager do you want to install?" 32 128 5 \
+	CHOOSEN_USERSPACE=$(whiptail --title "Package Selection" --checklist "Which desktop environment or window manager do you want to install?" 32 128 16 \
 	'Plasma'		'X11 + Wayland' 	off \
 	'Gnome' 		'X11 + Wayland' 	off \
 	'XFCE' 			'X11' 				off \
@@ -227,15 +277,15 @@ installation_guide() {
 	echo $CHOOSEN_USERSPACE
 
 	## Configuration of Login-Manager
-	CHOOSEN_LOGINMANAGER=$(whiptail --title "Package Selection" --radiolist "Which Login-Manager do you want to use?" 32 128 3 \
-	'SDDM'		'' 	on 	\
-	'GDM' 		'' 	off \
-	'LightDM' 	'' 	off \
+	CHOOSEN_LOGINMANAGER=$(whiptail --title "Package Selection" --radiolist "Which Login-Manager do you want to use?" 32 128 16 \
+	'SDDM'		'Recommended for Plasma' 	on 	\
+	'GDM' 		'Recommended for Gnomme' 	off \
+	'LightDM' 	'Recommended for XFCE'	 	off \
 	3>&1 1>&2 2>&3)
 	echo $CHOOSEN_LOGINMANAGER
 
 	## Configuration of user specific packages
-	CHOOSEN_USERPACKAGES=$(whiptail --title "Package Selection" --checklist --separate-output "Which desktop environment or window manager do you want to install?" 32 128 12 \
+	CHOOSEN_USERPACKAGES=$(whiptail --title "Package Selection" --checklist "Which desktop environment or window manager do you want to install?" 32 128 16 \
 	'Base'				'Browser, Editor, File manager, Calculator etc.' 	on 	\
 	'Editing' 			'Photo-, Video-, Audiotools' 						off \
 	'Flatpaks'			'Flatpaksupport, Discord, Fluentreader'				off	\
@@ -251,7 +301,7 @@ installation_guide() {
 	3>&1 1>&2 2>&3)
 	echo $CHOOSEN_USERPACKAGES
 
-	whiptail --title "Package Selection" --yesno "Do you want to install portable device optimizations like TLP for longer battery life?" 32 128 3>&1 1>&2 2>&3
+	whiptail --title "Package Selection" --yesno "Do you want to install portable device optimizations like TLP for longer battery life and enable touch support?" 32 128 3>&1 1>&2 2>&3
 	
 	if [[ $? -eq 0 ]]; then
 			BATTERY_OPTIMIZATION=true
@@ -259,9 +309,23 @@ installation_guide() {
 			BATTERY_OPTIMIZATION=false
 	fi
 
+	## Configuration of system wide theming
+	CHOOSEN_THEME=$(whiptail --title "Theming" --radiolist "Which system wide theme do you prefer?" 32 128 16 \
+	\
+	'Default'				'Default theme - No modifications'	on	\
+	'Catppuccin Latte'		'Light theme'						off	\
+	'Catppuccin Frappé'		'Light dark theme'					off	\
+	'Catppuccin Macchiato'	'Dark theme'						off	\
+	'Catppuccin Mocha'		'Dark dark theme'					off\
+	3>&1 1>&2 2>&3)
+	echo $CHOOSEN_THEME
+
+
 	###
 	### ---- End: Configuration of the system ----
 	###
+
+
 
 	## Last confirmation before executing script to install everything
 	whiptail --title "Finish and execute" --yesno "The configuration is complete. Do you want to run and execute your configuration? (This can take up some time.)" 32 128 3>&1 1>&2 2>&3
@@ -295,6 +359,10 @@ installation_guide() {
 			## Set hostname
 			echo $HOSTNAME > /mnt/etc/hostname
 
+
+
+
+
 			## Set language
 			echo $LANG > /mnt/etc/locale.conf
 
@@ -309,6 +377,9 @@ installation_guide() {
 			## Set timezone
 			ln -sf $TIMEZONE /mnt/etc/localtime
 			arch-chroot /mnt/ timedatectl set-local-rtc 0 # set hardware clock
+
+
+
 
 			## Generate localisation settings
 			arch-chroot /mnt/ locale-gen
@@ -325,6 +396,12 @@ installation_guide() {
 			sed -i '/^#\[multilib]/{n;s/^#//}' /mnt/etc/pacman.conf
 			sed -i '/^#\[multilib]/{s/^#//}' /mnt/etc/pacman.conf
 			arch-chroot /mnt/ pacman -Syyu --noconfirm
+
+			## Enable chaotic-aur
+			arch-chroot /mnt/ pacman-key --recv-key FBA220DFC880C036 --keyserver keyserver.ubuntu.com
+			arch-chroot /mnt/ pacman-key --lsign-key FBA220DFC880C036
+			arch-chroot /mnt/ pacman -U 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-keyring.pkg.tar.zst' 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-mirrorlist.pkg.tar.zst'
+			echo -e "[chaotic-aur] \nInclude = /etc/pacman.d/chaotic-mirrorlist" | tee -a /mnt/etc/pacman.conf
 
 			## Install yay package manager
 			mkdir /mnt/tmp/build
@@ -350,11 +427,18 @@ installation_guide() {
 			arch-chroot /mnt/ systemctl enable firewalld
 			arch-chroot /mnt/ systemctl enable watchdog
 
-			## Install Battery optimizations for portable devices
+			## Install Battery & Tocuh optimizations for portable devices
 			if [ $BATTERY_OPTIMIZATION == true ]; then
 					arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/driverLists/laptopPkgs.txt
 					arch-chroot /mnt/ systemctl enable cpupower
 					arch-chroot /mnt/ systemctl enable tlp
+					# Librewolf enable touch support
+					echo 'MOZ_USE_XINPUT2 DEFAULT=1' > /etc/security/pam_env.conf
+					#c6-Suspendbugfix (For some AMD-Systems)
+					#arch-chroot /mnt/ modprobe msr
+					#arch-chroot /mnt/ sh -c "echo msr > /etc/modules-load.d/msr.conf"
+					#arch-chroot /mnt/ sudo -u $USERNAME yay -S disable-c6-systemd
+					#arch-chroot /mnt/ systemctl enable disable-c6.service
 			fi
 			
 			## Install Userspace
@@ -364,10 +448,23 @@ installation_guide() {
 					Plasma)
 						echo "Add Plasma to installation query..."
 						arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/desktopLists/plasmaPkgs.txt
+						arch-chroot 
+						# install vlc dolphin addon + metadata remover dolphin addon
+						#mkdir /home/$USERNAME/.local/share/kservices5/ServiceMenus/
+						#cd /home/$USERNAME/build
+						#git clone https://github.com/Merrit/kde-dolphin-remove-metadata.git
+						#cd kde-dolphin-remove-metadata
+						#cp -r removeMetadata.desktop /home/$USERNAME/.local/share/kservices5/ServiceMenus/
+						#cd /home/$USERNAME/build
+						#git clone https://github.com/rc2dev/KDE-ServiceMenus.git
+						#cd KDE-ServiceMenus
+						#cp -r *.desktop /home/$USERNAME/.local/share/kservices5/ServiceMenus/
+						#arch-chroot /mnt/ firewall-cmd --permanent --zone=home --add-service=kdeconnect
 					;;
 					Gnome)
 						echo "Add Gnome to installation query..."
 						arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/desktopLists/gnomePkgs.txt
+						arch-chroot /mnt/ firewall-cmd --permanent --zone=home --add-service=kdeconnect
 					;;
 					XFCE)
 						echo "Add XFCE to installation query..."
@@ -395,9 +492,28 @@ installation_guide() {
 					echo "Set LightDM as Login-Manager..."
 					arch-chroot /mnt/ systemctl enable gdm
 				elif [ $CHOOSEN_LOGINMANAGER == "LightDM" ]; then
-					echo "Set LightDM as Login-Manager..."
+					echo "Set LightDM as Login-Manager..."ryzen 5625 u
 					arch-chroot /mnt/ systemctl enable lightdm
 			fi
+
+
+			## Install / Set system theme
+			if [ $CHOOSEN_THEME == "Default" ]; then
+					echo "Set system theme to Default..."
+				elif [ $CHOOSEN_THEME == "Catppuccin Latte" ]; then
+					echo "Set system theme to Catppuccin Latte..."
+					
+				elif [ $CHOOSEN_THEME == "Catppuccin Frappé" ]; then
+					echo "Set system theme to Catppuccin Frappé..."
+
+				elif [ $CHOOSEN_THEME == "Catppuccin Macchiato" ]; then
+					echo "Set system theme to Catppuccin Macchiato..."
+
+				elif [ $CHOOSEN_THEME == "Catppuccin Mocha" ]; then
+					echo "Set system theme to Catppuccin Mocha..."
+
+			fi
+
 
 			## Install Userspace PKGs
 			for i in ${CHOOSEN_USERPACKAGES[@]}
@@ -414,7 +530,14 @@ installation_guide() {
 					"Flatpaks")
 						echo "Add Flatpaks to installation query..."
 						arch-chroot /mnt/ sudo -u $USERNAME yay -S flatpak
-						#arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/softwareLists/flatpakPkgs.txt
+						## Configure theming for Flatpaks
+						arch-chroot /mnt/ sudo flatpak override --filesystem=$HOME/.themes
+						arch-chroot /mnt/ sudo flatpak override --env=GTK_THEME=##theme##
+						## Install Flatpaks
+						arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/softwareLists/flatpakPkgs.txt
+						## Install custom asar-file for Discord
+						rm /var/lib/flatpak/app/com.discordapp.Discord/current/active/files/discord/resources/app.asar
+						wget -c https://github.com/GooseMod/OpenAsar/releases/download/nightly/app.asar -P /var/lib/flatpak/app/com.discordapp.Discord/current/active/files/discord/resources/
 					;;
 					"Gaming")
 						echo "Add Gaming to installation query..."
@@ -431,26 +554,45 @@ installation_guide() {
 					"Printing")
 						echo "Add Printing to installation query..."
 						arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/softwareLists/printPkgs.txt
+
 						arch-chroot /mnt/ systemctl enable cups
+
+						arch-chroot /mnt/ firewall-cmd --permanent --zone=home --add-service=ipp-client
+						arch-chroot /mnt/ firewall-cmd --permanent --zone=home --add-service=mdns
+						arch-chroot /mnt/ firewall-cmd --permanent --zone=home --add-service=sane
+						# Enable Canon 4400F
+						sed -i 's/#usb 0x04a9 0x2228/usb 0x04a9 0x2228/g' /mnt/etc/sane.d/genesys.conf
 					;;
 					"Privacy")
 						echo "Add Privacy to installation query..."
 						arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/softwareLists/privacyPkgs.txt
+						firewalld-cmd --set-default=public
 					;;
 					"Programming")
 						echo "Add Programming to installation query..."
 						arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/softwareLists/programmingPkgs.txt
-						#cat pkgLists/softwareLists/vscExt.txt | while read VSC_EXTENSIONS || [[ -n $VSC_EXTENSIONS ]];
-						#do
-						#	code --install-extension $VSC_EXTENSIONS --force
-						#done
+
+						EXTENSION_FILE="vscExt.txt"
+						while IFS= read -r EXTENSION; do
+							code --install-extension "$EXTENSION"
+						done < "$EXTENSION_FILE"
 					;;
 					"Server")
 						echo "Add Server to installation query..."
 						arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/softwareLists/serverPkgs.txt
+						
 						arch-chroot /mnt/ systemctl enable httpd
 						arch-chroot /mnt/ systemctl enable samba
 						arch-chroot /mnt/ systemctl enable avahi-daemon
+
+						arch-chroot /mnt/ firewall-cmd --permanent --zone=home --add-service=http
+						arch-chroot /mnt/ firewall-cmd --permanent --zone=home --add-service=https
+						arch-chroot /mnt/ firewall-cmd --permanent --zone=home --add-service={samba,samba-client,samba-dc}
+						arch-chroot /mnt/ firewall-cmd --permanent --zone=libvirt --add-service=http
+						arch-chroot /mnt/ firewall-cmd --permanent --zone=libvirt --add-service=https
+						arch-chroot /mnt/ firewall-cmd --permanent --zone=libvirt --add-service={samba,samba-client,samba-dc}
+
+
 					;;
 					"Tools")
 						echo "Add Toosl to installation query..."
@@ -459,8 +601,10 @@ installation_guide() {
 					"VM")
 						echo "Add VM to installation query..."
 						arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/softwareLists/vmPkgs.txt
+
 						sed -i 's/#unix_sock_group = "libvirt"/unix_sock_group = "libvirt"/g' /mnt/etc/libvirt/libvirtd.conf
 						sed -i 's/#unix_sock_rw_perms = "0770"/unix_sock_rw_perms = "0770"/g' /mnt/etc/libvirt/libvirtd.conf
+
 						arch-chroot /mnt/ gpasswd -a $USERNAME libvirt
 						arch-chroot /mnt/ systemctl enable libvirtd
 					;;	
@@ -478,10 +622,10 @@ installation_guide() {
 			
 
 			## Generate mkinitcpio.conf
-			if 
+			
 
 
-			arch-chroot /mnt/ mkinitcpio -p linux
+			arch-chroot /mnt/ mkinitcpio -p $
 
 			## Change sudo for user(s) to normal
 			sed -i 's/%wheel ALL=(ALL:ALL) NOPASSWD: ALL/#%wheel ALL=(ALL:ALL) NOPASSWD: ALL/g' /mnt/etc/sudors

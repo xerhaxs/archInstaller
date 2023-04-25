@@ -2,6 +2,7 @@ element-desktop
 gnunet
 monero-gui
 onionshare
+portmaster-stub-bin
 session-desktop-bin
 torbrowser-launcher
 xmrig
