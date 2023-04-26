@@ -8,29 +8,209 @@
 ### ---- Start: Define functions for this installation script ----
 ###
 
+## Function for sartup message
+function_startup_message() {
+	whiptail --title "Start installation" --msgbox "This script will guide you through the installation of Arch Linux with customized settings.	Notice, that this script will only work on Arch Linux (and maybe arch-based systems)." 32 128 3>&1 1>&2 2>&3
+}
 
+## Function to start the installation guide
+function_start_installation_guide() {
+	whiptail --title "Start installation guide" --yesno "Do you want to start the installation guide?" 32 128 3>&1 1>&2 2>&3
+	if [[ $? -eq 0 ]]; then
+
+		## Detect if the script is compatible with the operation system / host system
+		case "$OSTYPE" in
+				linux*)
+					if grep -q 'Arch Linux' /etc/os-release; then
+						echo 'Supported system detected. Continue installation...'
+						function_installation_guide
+					fi
+			;;
+
+			## If an unsupported system gets detected.
+			*)
+				whiptail --title "ERROR - Unsupported system detected!" --yesno "Your system is not officially supported by this script. It is not recommended to run this script on not officially supported systems, as it can cause damage to your installed systems or it might not work properly. If you decide to run this script anyway - you have been warned! Do you want to continue?" 32 128 3>&1 1>&2 2>&3
+				if [[ $? -eq 0 ]]; then
+						pacman -Syyu hwinfo git wget
+						function_installation_guide
+					elif [[ $? -eq 1 ]]; then
+						whiptail --title "MESSAGE" --msgbox "Cancelling Process since user pressed <NO>." 32 128 3>&1 1>&2 2>&3
+					elif [[ $? -eq 255 ]]; then
+						whiptail --title "MESSAGE" --msgbox "User pressed ESC. Exiting the script" 32 128 3>&1 1>&2 2>&3
+				fi
+			;;
+		esac
+
+		elif [[ $? -eq 1 ]]; then
+			whiptail --title "MESSAGE" --msgbox "Cancelling Process since user pressed <NO>." 32 128 3>&1 1>&2 2>&3
+		elif [[ $? -eq 255 ]]; then
+			whiptail --title "MESSAGE" --msgbox "User pressed ESC. Exiting the script" 32 128 3>&1 1>&2 2>&3
+	fi
+}
+
+## Function to set the keyboard layout during the installation process
+function_kbd_load() {
+	KBD_OPTIONS=()
+
+	while IFS= read -r KBD_LINE; do
+		KBD_OPTIONS+=("$KBD_LINE" "")
+	done < <(localectl list-x11-keymap-layouts)
+
+	CHOOSEN_KBD_LAYOUT=$(whiptail --title "Keyboard Layout" --menu "Pick your keyboard layout (This keyboard layout will only be used during the installation process.)" 32 128 16 "${KBD_OPTIONS[@]}" 3>&1 1>&2 2>&3)
+	loadkeys $CHOOSEN_KBD_LAYOUT
+}
 
 ## Function to detect and set a password
-conf_password() {
-	conf_set_password() {
+function_password() {
+	function_set_password() {
 		PASSWORD=$(whiptail --title "Set password" --passwordbox "Choose a strong password." 32 128 3>&1 1>&2 2>&3)
+
 		PASSWORD_CHECK=$(whiptail --title "Confirm password" --passwordbox "Type your password again to confirm." 32 128 3>&1 1>&2 2>&3)
 	}
-	conf_set_password
+
+	function_set_password
 	PASSWORD_SET=false
+
 	while [ $PASSWORD_SET = false ]; do
 		if [ $PASSWORD == $PASSWORD_CHECK ]; then
 			PASSWORD_SET=true
 			echo "$PASSWORD"
 		else
 			whiptail --title "Incorrect Password" --msgbox "The passwords do not match. Please try again." 32 128 3>&1 1>&2 2>&3
-			conf_set_password
+			function_set_password
 		fi
 	done
 }
 
-conf_timeshift_setup() {
-	
+## Fubction to detect CPU Microcode
+function_detect_microcode() {
+	if lscpu | grep "AMD"; then
+			echo "Add amd-ucode to installation query, because AMD CPU has been found..."
+			CPU_MICROCODE="amd-ucode"
+		elif lscpu | grep "Intel"; then
+			echo "Add intel-ucode to installation query, because Intel CPU has been found..."
+			CPU_MICROCODE="intel-ucode"
+		else
+			whiptail --title "Hardware Configuration" --msgbox "Unknown CPU-Architektur detected. Continue installation without Microcode." 32 128 3>&1 1>&2 2>&3
+			CPU_MICROCODE="amd-ucode intel-ucode"
+	fi
+}
+
+## Function to detect GPU driver
+function_detect_gpu() {
+	if lshw -C display | grep "AMD"; then
+			echo "Add AMD-driver to installation query, because AMD GPU has been found..."
+			GPU_DRIVER="pkgLists/driverLists/amdGpuPkgs.txt"
+			MODULES_DRIVER="sed -i 's/MODULES=(ext4)/MODULES=(ext4 amdgpu)/g' /etc/mkinitcpio.conf"
+		elif lshw -C display | grep "NVIDIA"; then
+				CHOOSEN_NVIDIA_DRIVER=$(whiptail --title "Nvidia driver selection" --menu "Do you want to use proprietary or open-source drivers for your Nvidia card?" 32 128 2 \
+				"Proprietary" "Much better performance" \
+				"Open-Source" "Free and open-source" 3>&1 1>&2 2>&3)
+
+				echo $CHOOSEN_NVIDIA_DRIVER
+
+			if [ $CHOOSEN_NVIDIA_DRIVER == "Proprietary" ]; then
+					echo "Add proprietary nvidia driver to installation query..."
+					GPU_DRIVER="pkgLists/driverLists/nvidiaClosedGpuPkgs.txt"
+					MODULES_DRIVER="sed -i 's/MODULES=(ext4)/MODULES=(ext4 nvidia nvidia_modeset nvidia_uvm nvidia_drm)/g' /etc/mkinitcpio.conf"
+				else
+					echo "Add open-source nvidia driver to installation query..."
+					GPU_DRIVER="pkgLists/driverLists/nvidiaOpenGpuPkgs.txt"
+					MODULES_DRIVER="sed -i 's/MODULES=(ext4)/MODULES=(ext4 nouveau)/g' /etc/mkinitcpio.conf"
+			fi
+
+		else
+			whiptail --title "Hardware Configuration" --msgbox "Unknown GPU detected. Continue installation without GPU-Drivers" 32 128 3>&1 1>&2 2>&3
+	fi
+}
+
+## Function to set installation disk
+function_select_installation_disk() {
+	DISKS=$(lsblk | grep disk | awk '{print $1}')
+
+	DISK_OPTIONS=()
+	for DISK in $DISKS; do
+		DISK_SIZE=$(lsblk "/dev/$DISK" | grep disk | awk '{print $4}')
+		DISK_OPTIONS+=("Disk: /dev/$DISK" "Size: $DISK_SIZE")
+	done
+
+	CHOOSEN_DRIVE=$(whiptail --title "Menu selected Drive" --menu "Where should Arch Linux be installed?" 32 128 16 "${DISK_OPTIONS[@]}" 3>&1 1>&2 2>&3)
+
+	echo "Choosen Disk: $CHOOSEN_DRIVE"
+}
+
+## Function to set the hostname
+function_select_hostname() {
+	HOSTNAME=$(whiptail --title "Set Hostname" --inputbox "Choose the Hostname of the computer." 32 128 3>&1 1>&2 2>&3)
+	echo "Hostname: $HOSTNAME"
+}
+
+## Function to set the user credentials
+function_select_user_credentials() {
+	USERNAME=$(whiptail --title "Create User" --inputbox "Choose your username (only lowercase letters, numbers and no spaces or special characters)" 32 128 3>&1 1>&2 2>&3)
+	USERPASS=$(function_password)
+}
+
+## Function to configurate the Desktop environment / Window Manager
+function_select_enviroment() {
+	CHOOSEN_USERSPACE=$(whiptail --title "Package Selection" --checklist "Which desktop environment or window manager do you want to install?" 32 128 16 \
+	'Plasma'		'X11 + Wayland' 	off \
+	'Gnome' 		'X11 + Wayland' 	off \
+	'XFCE' 			'X11' 				off \
+	'Sway' 			'Wayland' 			off \
+	'AwesomeWM' 	'X11' 				off \
+	3>&1 1>&2 2>&3)
+
+	echo $CHOOSEN_USERSPACE
+}
+
+## Function to configurate the Login-Manager
+function_select_login_manager() {
+	CHOOSEN_LOGINMANAGER=$(whiptail --title "Package Selection" --radiolist "Which Login-Manager do you want to use?" 32 128 16 \
+	'SDDM'		'Recommended for Plasma' 	on 	\
+	'GDM' 		'Recommended for Gnomme' 	off \
+	'LightDM' 	'Recommended for XFCE'	 	off \
+	3>&1 1>&2 2>&3)
+
+	echo $CHOOSEN_LOGINMANAGER
+}
+
+## Function to configurate user specific packages
+function_select_package() {
+	CHOOSEN_USERPACKAGES=$(whiptail --title "Package Selection" --checklist "Which desktop environment or window manager do you want to install?" 32 128 16 \
+	'Base'				'Browser, Editor, File manager, Calculator etc.' 	on 	\
+	'Editing' 			'Photo-, Video-, Audiotools' 						off \
+	'Flatpaks'			'Flatpaksupport, Discord, Fluentreader'				off	\
+	'Gaming' 			'Steam, Lutris, Heroic'								off \
+	'Multimedia' 		'RSS-Client, Videoclient, Mediaplayer' 				off \
+	'Office' 			'Mailclient, Office suite, Calendar, Printing'		off \
+	'Printing'			'CUPS, Scantools'									off \
+	'Privacy'			'Tor, Onineshare, Anonymous Messanger etc.'			off	\
+	'Programming' 		'IDEs, Tools, Language support' 					off \
+	'Server'			'WebDAV, Nextcloud, PiHole, Jellyfin, Invidious'	off	\
+	'Tools'				'Some usefull stuff'								off \
+	'VM'				'Virtualisation, QEMU, Libvirt'						off	\
+	3>&1 1>&2 2>&3)
+
+	echo $CHOOSEN_USERPACKAGES
+}
+
+## Function to configurate portable device optimizations
+function_select_portable_device_optimization() {
+	whiptail --title "Package Selection" --yesno "Do you want to install portable device optimizations like TLP for longer battery life and enable touch support?" 32 128 3>&1 1>&2 2>&3
+	if [[ $? -eq 0 ]]; then
+			BATTERY_OPTIMIZATION=true
+		else
+			BATTERY_OPTIMIZATION=false
+	fi
+}
+
+## Function to configurate the timeshift backup system
+function_timeshift_setup() {
+	#
+	#
+	#
+	#
 }
 
 
@@ -44,52 +224,15 @@ conf_timeshift_setup() {
 
 
 
-## Startup massage
-whiptail --title "Start installation" --msgbox "This script will guide you through the installation of Arch Linux with customized settings.
-Notice, that this script will only work on Arch Linux (and maybe arch-based systems)." 32 128 3>&1 1>&2 2>&3
+function_startup_message
 
-## Start installation guide
-whiptail --title "Start installation guide" --yesno "Do you want to start the installation guide?" 32 128 3>&1 1>&2 2>&3
-
-if [[ $? -eq 0 ]]; then
-	## Detect if the script is compatible with the operation system / host system
-	case "$OSTYPE" in
-			linux*)
-			if grep -q 'Arch Linux' /etc/os-release; then
-				echo 'Supported system detected. Continue installation...'
-				installation_guide
-			fi
-		;;
-
-		## If an unsupported system gets detected.
-		*)
-			whiptail --title "ERROR - Unsupported system detected!" --yesno "Your system is not officially supported by this script. It is not recommended to run this script on not officially supported systems, as it can cause damage to your installed systems or it might not work properly. If you decide to run this script anyway - you have been warned! Do you want to continue?" 32 128 3>&1 1>&2 2>&3
-			if [[ $? -eq 0 ]]; then
-				pacman -Syyu hwinfo git wget
-				installation_guide
-			elif [[ $? -eq 1 ]]; then
-				whiptail --title "MESSAGE" --msgbox "Cancelling Process since user pressed <NO>." 32 128 3>&1 1>&2 2>&3
-			elif [[ $? -eq 255 ]]; then
-				whiptail --title "MESSAGE" --msgbox "User pressed ESC. Exiting the script" 32 128 3>&1 1>&2 2>&3
-			fi
-		;;
-	esac
-	elif [[ $? -eq 1 ]]; then
-		whiptail --title "MESSAGE" --msgbox "Cancelling Process since user pressed <NO>." 32 128 3>&1 1>&2 2>&3
-	elif [[ $? -eq 255 ]]; then
-		whiptail --title "MESSAGE" --msgbox "User pressed ESC. Exiting the script" 32 128 3>&1 1>&2 2>&3
-fi
+function_start_installation_guide
 
 ## Installation guide
-installation_guide() {
+function_installation_guide() {
 
-	## Set keymap for installation
-	KBD_OPTIONS=()
-	while IFS= read -r KBD_LINE; do
-		KBD_OPTIONS+=("$KBD_LINE" "")
-	done < <(localectl list-x11-keymap-layouts)
-	CHOOSEN_KBD_LAYOUT=$(whiptail --title "Keyboard Layout" --menu "Pick your keyboard layout (This keyboard layout will only be used during the installation process.)" 32 128 16 "${KBD_OPTIONS[@]}" 3>&1 1>&2 2>&3)
-	loadkeys $CHOOSEN_KBD_LAYOUT
+
+	function_kbd_load
 
 	## Kernel and system configuration
 	CHOOSEN_SYSTEM_TYPE=$(whiptail --title "Kernel and System configuration" --menu "Which Kernel option do you prefer?" 32 128 4 \
@@ -114,18 +257,7 @@ installation_guide() {
 			whiptail --title "MESSAGE" --msgbox "User pressed ESC. Exiting the script" 32 128 3>&1 1>&2 2>&3
 	fi
 
-	## Drive configuration and disk formatting
-	DISKS=$(lsblk | grep disk | awk '{print $1}')
-
-	DISK_OPTIONS=()
-	for DISK in $DISKS; do
-		DISK_SIZE=$(lsblk "/dev/$DISK" | grep disk | awk '{print $4}')
-		DISK_OPTIONS+=("Disk: /dev/$DISK" "Size: $DISK_SIZE")
-	done
-
-	CHOOSEN_DRIVE=$(whiptail --title "Menu selected Drive" --menu "Where should Arch Linux be installed?" 32 128 16 "${DISK_OPTIONS[@]}" 3>&1 1>&2 2>&3)
-
-	echo "Choosen Disk: $CHOOSEN_DRIVE"
+	function_select_installation_disk
 
 	parted $CHOOSEN_DRIVE mklabel gpt \
 		mkpart primary fat32 1MiB 512MiB \
@@ -135,44 +267,11 @@ installation_guide() {
 
 
 
-	## Detect CPU Microcode
-	if lscpu | grep "AMD"; then
-			echo "Add amd-ucode to installation query, because AMD CPU has been found..."
-			CPU_MICROCODE="amd-ucode"
-		elif lscpu | grep "Intel"; then
-			echo "Add intel-ucode to installation query, because Intel CPU has been found..."
-			CPU_MICROCODE="intel-ucode"
-		else
-			whiptail --title "Hardware Configuration" --msgbox "Unknown CPU-Architektur detected. Continue installation without Microcode." 32 128 3>&1 1>&2 2>&3
-			CPU_MICROCODE="amd-ucode intel-ucode"
-	fi
+	function_detect_microcode
 
-	## Detect GPU
-	if lshw -C display | grep "AMD"; then
-			echo "Add AMD-driver to installation query, because AMD GPU has been found..."
-			GPU_DRIVER="pkgLists/driverLists/amdGpuPkgs.txt"
-			MODULES_DRIVER="sed -i 's/MODULES=(ext4)/MODULES=(ext4 amdgpu)/g' /etc/mkinitcpio.conf"
-		elif lshw -C display | grep "NVIDIA"; then
-			CHOOSEN_NVIDIA_DRIVER=$(whiptail --title "Nvidia driver selection" --menu "Do you want to use proprietary or open-source drivers for your Nvidia card?" 32 128 2 \
-			"Proprietary" "Much better performance" \
-			"Open-Source" "Free and open-source" 3>&1 1>&2 2>&3)
-			echo $CHOOSEN_NVIDIA_DRIVER
-			if [ $CHOOSEN_NVIDIA_DRIVER == "Proprietary" ]; then
-					echo "Add proprietary nvidia driver to installation query..."
-					GPU_DRIVER="pkgLists/driverLists/nvidiaClosedGpuPkgs.txt"
-					MODULES_DRIVER="sed -i 's/MODULES=(ext4)/MODULES=(ext4 nvidia nvidia_modeset nvidia_uvm nvidia_drm)/g' /etc/mkinitcpio.conf"
-				else
-					echo "Add open-source nvidia driver to installation query..."
-					GPU_DRIVER="pkgLists/driverLists/nvidiaOpenGpuPkgs.txt"
-					MODULES_DRIVER="sed -i 's/MODULES=(ext4)/MODULES=(ext4 nouveau)/g' /etc/mkinitcpio.conf"
-			fi
-		else
-			whiptail --title "Hardware Configuration" --msgbox "Unknown GPU detected. Continue installation without GPU-Drivers" 32 128 3>&1 1>&2 2>&3
-	fi
+	function_detect_gpu
 
-	## Define hostname
-	HOSTNAME=$(whiptail --title "Set Hostname" --inputbox "Choose the Hostname of the computer." 32 128 3>&1 1>&2 2>&3)
-	echo "Hostname: $HOSTNAME"
+	function_select_hostname
 
 
 
@@ -255,59 +354,24 @@ installation_guide() {
 
 
 
-
+	
 
 	### User Configuration
 
 	## Root password
-	ROOTPASS=$(conf_password)
+	ROOTPASS=$(function_password)
 
-	## User creation
-	USERNAME=$(whiptail --title "Create User" --inputbox "Choose your username (only lowercase letters, numbers and no spaces or special characters)" 32 128 3>&1 1>&2 2>&3)
-	USERPASS=$(conf_password)
+	function_select
 
-	## Configuration of the Desktop environment / Window Manager
-	CHOOSEN_USERSPACE=$(whiptail --title "Package Selection" --checklist "Which desktop environment or window manager do you want to install?" 32 128 16 \
-	'Plasma'		'X11 + Wayland' 	off \
-	'Gnome' 		'X11 + Wayland' 	off \
-	'XFCE' 			'X11' 				off \
-	'Sway' 			'Wayland' 			off \
-	'AwesomeWM' 	'X11' 				off \
-	3>&1 1>&2 2>&3)
-	echo $CHOOSEN_USERSPACE
+	function_select_user_credentials
 
-	## Configuration of Login-Manager
-	CHOOSEN_LOGINMANAGER=$(whiptail --title "Package Selection" --radiolist "Which Login-Manager do you want to use?" 32 128 16 \
-	'SDDM'		'Recommended for Plasma' 	on 	\
-	'GDM' 		'Recommended for Gnomme' 	off \
-	'LightDM' 	'Recommended for XFCE'	 	off \
-	3>&1 1>&2 2>&3)
-	echo $CHOOSEN_LOGINMANAGER
+	function_select_enviroment
 
-	## Configuration of user specific packages
-	CHOOSEN_USERPACKAGES=$(whiptail --title "Package Selection" --checklist "Which desktop environment or window manager do you want to install?" 32 128 16 \
-	'Base'				'Browser, Editor, File manager, Calculator etc.' 	on 	\
-	'Editing' 			'Photo-, Video-, Audiotools' 						off \
-	'Flatpaks'			'Flatpaksupport, Discord, Fluentreader'				off	\
-	'Gaming' 			'Steam, Lutris, Heroic'								off \
-	'Multimedia' 		'RSS-Client, Videoclient, Mediaplayer' 				off \
-	'Office' 			'Mailclient, Office suite, Calendar, Printing'		off \
-	'Printing'			'CUPS, Scantools'									off \
-	'Privacy'			'Tor, Onineshare, Anonymous Messanger etc.'			off	\
-	'Programming' 		'IDEs, Tools, Language support' 					off \
-	'Server'			'WebDAV, Nextcloud, PiHole, Jellyfin, Invidious'	off	\
-	'Tools'				'Some usefull stuff'								off \
-	'VM'				'Virtualisation, QEMU, Libvirt'						off	\
-	3>&1 1>&2 2>&3)
-	echo $CHOOSEN_USERPACKAGES
+	function_select_login_manager
 
-	whiptail --title "Package Selection" --yesno "Do you want to install portable device optimizations like TLP for longer battery life and enable touch support?" 32 128 3>&1 1>&2 2>&3
-	
-	if [[ $? -eq 0 ]]; then
-			BATTERY_OPTIMIZATION=true
-		else
-			BATTERY_OPTIMIZATION=false
-	fi
+	function_select_package
+
+	function_select_portable_device_optimization
 
 	## Configuration of system wide theming
 	CHOOSEN_THEME=$(whiptail --title "Theming" --radiolist "Which system wide theme do you prefer?" 32 128 16 \
