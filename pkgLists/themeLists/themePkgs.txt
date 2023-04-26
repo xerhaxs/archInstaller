@@ -5,11 +5,15 @@ catppuccin-gtk-theme-mocha
 catppuccin-gtk-theme-macchiato
 catppuccin-gtk-theme-frappe
 catppuccin-gtk-theme-latte
+plymouth-theme-catppuccin-mocha-git
+plymouth-theme-catppuccin-macchiato-git
+plymouth-theme-catppuccin-frappe-git
+plymouth-theme-catppuccin-latte-git
 lightly-git
 
 
 ln -sf ”/usr/share/themes/Catppuccin-Mocha-Standard-Mauve-Dark/gtk-4.0/assets” ”/usr/share/gtk-4.0/assets”
-ln -sf "/usr/share/themes/Catppuccin-Mocha-Standard-Mauve-Dark/gtk-4.0/gtk.css” "/usr/share/gtk-4.0/gtk.css”
+ln -sf ”/usr/share/themes/Catppuccin-Mocha-Standard-Mauve-Dark/gtk-4.0/gtk.css” "/usr/share/gtk-4.0/gtk.css”
 ln -sf "/usr/share/themes/Catppuccin-Mocha-Standard-Mauve-Dark/gtk-4.0/gtk-dark.css” "/usr/share/gtk-4.0/gtk-dark.css”
 
 

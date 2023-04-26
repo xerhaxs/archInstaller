@@ -534,6 +534,8 @@ function_installation_guide() {
 					#arch-chroot /mnt/ systemctl enable disable-c6.service
 			fi
 			
+			arch-chroot /mnt/ mkinitcpio -p $
+
 			## Install Userspace
 			for i in ${CHOSEN_USERSPACE[@]}
 			do
@@ -590,20 +592,36 @@ function_installation_guide() {
 			fi
 
 
+sddm-catppuccin-git
+catppuccin-kde-theme-git
+catppuccin-gtk-theme-mocha
+catppuccin-gtk-theme-macchiato
+catppuccin-gtk-theme-frappe
+catppuccin-gtk-theme-latte
+
 			## Install / Set system theme
 			if [ $CHOSEN_THEME == "Default" ]; then
 					echo "Set system theme to Default..."
+
 				elif [ $CHOSEN_THEME == "Catppuccin Latte" ]; then
 					echo "Set system theme to Catppuccin Latte..."
+					arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm plymouth-theme-catppuccin-latte-git
+					arch-chroot /mnt/ plymouth-set-default-theme -R catppuccin-latte
 					
 				elif [ $CHOSEN_THEME == "Catppuccin Frappé" ]; then
 					echo "Set system theme to Catppuccin Frappé..."
+					arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm plymouth-theme-catppuccin-frappe-git
+					arch-chroot /mnt/ plymouth-set-default-theme -R catppuccin-frappe
 
 				elif [ $CHOSEN_THEME == "Catppuccin Macchiato" ]; then
 					echo "Set system theme to Catppuccin Macchiato..."
+					arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm plymouth-theme-catppuccin-macchiato-git
+					arch-chroot /mnt/ plymouth-set-default-theme -R catppuccin-macchiato
 
 				elif [ $CHOSEN_THEME == "Catppuccin Mocha" ]; then
 					echo "Set system theme to Catppuccin Mocha..."
+					arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm plymouth-theme-catppuccin-Mocha-git
+					arch-chroot /mnt/ plymouth-set-default-theme -R catppuccin-mocha
 
 			fi
 
