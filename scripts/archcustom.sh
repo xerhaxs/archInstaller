@@ -56,14 +56,14 @@ function_kbd_load() {
 		KBD_OPTIONS+=("$KBD_LINE" "")
 	done < <(localectl list-x11-keymap-layouts)
 
-	CHOOSEN_KBD_LAYOUT=$(whiptail --title "Keyboard Layout" --menu "Pick your keyboard layout (This keyboard layout will only be used during the installation process.)" 32 128 16 "${KBD_OPTIONS[@]}" 3>&1 1>&2 2>&3)
-	loadkeys $CHOOSEN_KBD_LAYOUT
+	CHOSEN_KBD_LAYOUT=$(whiptail --title "Keyboard Layout" --menu "Pick your keyboard layout (This keyboard layout will only be used during the installation process.)" 32 128 16 "${KBD_OPTIONS[@]}" 3>&1 1>&2 2>&3)
+	loadkeys $CHOSEN_KBD_LAYOUT
 }
 
 ## Function to detect and set a password
 function_password() {
 	function_set_password() {
-		PASSWORD=$(whiptail --title "Set password" --passwordbox "Choose a strong password." 32 128 3>&1 1>&2 2>&3)
+		PASSWORD=$(whiptail --title "Set password" --passwordbox "Chose a strong password." 32 128 3>&1 1>&2 2>&3)
 
 		PASSWORD_CHECK=$(whiptail --title "Confirm password" --passwordbox "Type your password again to confirm." 32 128 3>&1 1>&2 2>&3)
 	}
@@ -103,13 +103,13 @@ function_detect_gpu() {
 			GPU_DRIVER="pkgLists/driverLists/amdGpuPkgs.txt"
 			MODULES_DRIVER="sed -i 's/MODULES=(ext4)/MODULES=(ext4 amdgpu)/g' /etc/mkinitcpio.conf"
 		elif lshw -C display | grep "NVIDIA"; then
-				CHOOSEN_NVIDIA_DRIVER=$(whiptail --title "Nvidia driver selection" --menu "Do you want to use proprietary or open-source drivers for your Nvidia card?" 32 128 2 \
+				CHOSEN_NVIDIA_DRIVER=$(whiptail --title "Nvidia driver selection" --menu "Do you want to use proprietary or open-source drivers for your Nvidia card?" 32 128 2 \
 				"Proprietary" "Much better performance" \
 				"Open-Source" "Free and open-source" 3>&1 1>&2 2>&3)
 
-				echo $CHOOSEN_NVIDIA_DRIVER
+				echo $CHOSEN_NVIDIA_DRIVER
 
-			if [ $CHOOSEN_NVIDIA_DRIVER == "Proprietary" ]; then
+			if [ $CHOSEN_NVIDIA_DRIVER == "Proprietary" ]; then
 					echo "Add proprietary nvidia driver to installation query..."
 					GPU_DRIVER="pkgLists/driverLists/nvidiaClosedGpuPkgs.txt"
 					MODULES_DRIVER="sed -i 's/MODULES=(ext4)/MODULES=(ext4 nvidia nvidia_modeset nvidia_uvm nvidia_drm)/g' /etc/mkinitcpio.conf"
@@ -134,26 +134,46 @@ function_select_installation_disk() {
 		DISK_OPTIONS+=("Disk: /dev/$DISK" "Size: $DISK_SIZE")
 	done
 
-	CHOOSEN_DRIVE=$(whiptail --title "Menu selected Drive" --menu "Where should Arch Linux be installed?" 32 128 16 "${DISK_OPTIONS[@]}" 3>&1 1>&2 2>&3)
+	CHOSEN_DRIVE=$(whiptail --title "Menu selected Drive" --menu "Where should Arch Linux be installed?" 32 128 16 "${DISK_OPTIONS[@]}" 3>&1 1>&2 2>&3)
 
-	echo "Choosen Disk: $CHOOSEN_DRIVE"
+	echo "CHOSEN Disk: $CHOSEN_DRIVE"
 }
 
 ## Function to set the hostname
 function_select_hostname() {
-	HOSTNAME=$(whiptail --title "Set Hostname" --inputbox "Choose the Hostname of the computer." 32 128 3>&1 1>&2 2>&3)
+	HOSTNAME=$(whiptail --title "Set Hostname" --inputbox "Chose the Hostname of the computer." 32 128 3>&1 1>&2 2>&3)
 	echo "Hostname: $HOSTNAME"
+}
+
+## Function to set the system keyboard layout
+function_system_keyboard_layout() {
+	# Set the variables
+	LAYOUT_LANG_LIST=( $(localectl list-keymaps | sort) )
+	LAYOUT_MENU_LIST=()
+
+	# Iterate through the list of available language and create the menu
+	for LAYOUT_LANG in "${LAYOUT_LANG_LIST[@]}"; do
+		LAYOUT_MENU_LIST+=("$LAYOUT_LANG" "" off)
+	done
+
+	# Show the Whiptail menu and set the keyboard layout
+	CHOSEN_SYSTEM_KEYBOARD_LAYOUT=$(whiptail --title "Select Keyboard Layout" --radiolist "Chose your keyboard layout:" 32 128 16 "${LAYOUT_MENU_LIST[@]}" 3>&1 1>&2 2>&3)
+}
+
+## Function to set the root credentials
+function_select_root_credentials() {
+	ROOTPASS=$(function_password)
 }
 
 ## Function to set the user credentials
 function_select_user_credentials() {
-	USERNAME=$(whiptail --title "Create User" --inputbox "Choose your username (only lowercase letters, numbers and no spaces or special characters)" 32 128 3>&1 1>&2 2>&3)
+	USERNAME=$(whiptail --title "Create User" --inputbox "Chose your username (only lowercase letters, numbers and no spaces or special characters)" 32 128 3>&1 1>&2 2>&3)
 	USERPASS=$(function_password)
 }
 
 ## Function to configurate the Desktop environment / Window Manager
 function_select_enviroment() {
-	CHOOSEN_USERSPACE=$(whiptail --title "Package Selection" --checklist "Which desktop environment or window manager do you want to install?" 32 128 16 \
+	CHOSEN_USERSPACE=$(whiptail --title "Package Selection" --checklist "Which desktop environment or window manager do you want to install?" 32 128 16 \
 	'Plasma'		'X11 + Wayland' 	off \
 	'Gnome' 		'X11 + Wayland' 	off \
 	'XFCE' 			'X11' 				off \
@@ -161,23 +181,23 @@ function_select_enviroment() {
 	'AwesomeWM' 	'X11' 				off \
 	3>&1 1>&2 2>&3)
 
-	echo $CHOOSEN_USERSPACE
+	echo $CHOSEN_USERSPACE
 }
 
 ## Function to configurate the Login-Manager
 function_select_login_manager() {
-	CHOOSEN_LOGINMANAGER=$(whiptail --title "Package Selection" --radiolist "Which Login-Manager do you want to use?" 32 128 16 \
+	CHOSEN_LOGINMANAGER=$(whiptail --title "Package Selection" --radiolist "Which Login-Manager do you want to use?" 32 128 16 \
 	'SDDM'		'Recommended for Plasma' 	on 	\
 	'GDM' 		'Recommended for Gnomme' 	off \
 	'LightDM' 	'Recommended for XFCE'	 	off \
 	3>&1 1>&2 2>&3)
 
-	echo $CHOOSEN_LOGINMANAGER
+	echo $CHOSEN_LOGINMANAGER
 }
 
 ## Function to configurate user specific packages
 function_select_package() {
-	CHOOSEN_USERPACKAGES=$(whiptail --title "Package Selection" --checklist "Which desktop environment or window manager do you want to install?" 32 128 16 \
+	CHOSEN_USERPACKAGES=$(whiptail --title "Package Selection" --checklist "Which desktop environment or window manager do you want to install?" 32 128 16 \
 	'Base'				'Browser, Editor, File manager, Calculator etc.' 	on 	\
 	'Editing' 			'Photo-, Video-, Audiotools' 						off \
 	'Flatpaks'			'Flatpaksupport, Discord, Fluentreader'				off	\
@@ -192,7 +212,7 @@ function_select_package() {
 	'VM'				'Virtualisation, QEMU, Libvirt'						off	\
 	3>&1 1>&2 2>&3)
 
-	echo $CHOOSEN_USERPACKAGES
+	echo $CHOSEN_USERPACKAGES
 }
 
 ## Function to configurate portable device optimizations
@@ -203,6 +223,19 @@ function_select_portable_device_optimization() {
 		else
 			BATTERY_OPTIMIZATION=false
 	fi
+}
+
+## Function to configurate the system wide theming
+function_select_theme() {
+	CHOSEN_THEME=$(whiptail --title "Theming" --radiolist "Which system wide theme do you prefer?" 32 128 16 \
+	'Default'				'Default theme - No modifications'	on	\
+	'Catppuccin Latte'		'Light theme'						off	\
+	'Catppuccin Frappé'		'Light dark theme'					off	\
+	'Catppuccin Macchiato'	'Dark theme'						off	\
+	'Catppuccin Mocha'		'Dark dark theme'					off	\
+	3>&1 1>&2 2>&3)
+
+	echo $CHOSEN_THEME
 }
 
 ## Function to configurate the timeshift backup system
@@ -235,23 +268,23 @@ function_installation_guide() {
 	function_kbd_load
 
 	## Kernel and system configuration
-	CHOOSEN_SYSTEM_TYPE=$(whiptail --title "Kernel and System configuration" --menu "Which Kernel option do you prefer?" 32 128 4 \
+	CHOSEN_SYSTEM_TYPE=$(whiptail --title "Kernel and System configuration" --menu "Which Kernel option do you prefer?" 32 128 4 \
 	"Basic" 	"Everything will be installed on one partition. No security modules or special modifications. Normal Kernel." \
 	"Zen" 		"Everything will be installed on one partition. The Zen-Kernel will be used." \
 	"LTS"		"Everything will be installed on one partition. The LTS-Kernel will be used." \
 	"Hardened"	"The system will be a Fort Nox for your data. The system will be installed with SeLinux, Full Diks Encryption etc." 3>&1 1>&2 2>&3)
-	if [ $CHOOSEN_SYSTEM_TYPE == "Basic" ]; then
+	if [ $CHOSEN_SYSTEM_TYPE == "Basic" ]; then
 			KERNEL="linux linux-headers"
 			EXECUTING_CMDS+=("" "")
-		elif [ $CHOOSEN_SYSTEM_TYPE == "Zen" ]; then
+		elif [ $CHOSEN_SYSTEM_TYPE == "Zen" ]; then
 			KERNEL="linux-zen linux-zen-headers"
 			EXECUTING_CMDS+=("" "")
-		elif [ $CHOOSEN_SYSTEM_TYPE == "LTS" ]; then
+		elif [ $CHOSEN_SYSTEM_TYPE == "LTS" ]; then
 			KERNEL="linux-lts linux-lts-headers"
 			EXECUTING_CMDS+=("" "")
-		elif [ $CHOOSEN_SYSTEM_TYPE == "Hardened" ]; then
+		elif [ $CHOSEN_SYSTEM_TYPE == "Hardened" ]; then
 			KERNEL="linux-hardened linux-hardened-headers"
-			CHOOSEN_INSTALL_LISTS+=()
+			CHOSEN_INSTALL_LISTS+=()
 			EXECUTING_CMDS+=("" "")
 		else
 			whiptail --title "MESSAGE" --msgbox "User pressed ESC. Exiting the script" 32 128 3>&1 1>&2 2>&3
@@ -259,7 +292,7 @@ function_installation_guide() {
 
 	function_select_installation_disk
 
-	parted $CHOOSEN_DRIVE mklabel gpt \
+	parted $CHOSEN_DRIVE mklabel gpt \
 		mkpart primary fat32 1MiB 512MiB \
 		set 1 esp on \
 		mkpart primary ext4 512MiB 100%
@@ -304,10 +337,10 @@ function_installation_guide() {
 	done < "$LOCALE_FILE"
 
 	# Whiptail-Checkliste anzeigen und Auswahl speichern
-	CHOOSEN_LOCALS=$(whiptail --title "Textoptionen" --checklist "Wählen Sie die gewünschten Optionen:" 15 50 5 "${LOCALE_OPTIONS[@]}" 3>&1 1>&2 2>&3)
+	CHOSEN_LOCALS=$(whiptail --title "Textoptionen" --checklist "Wählen Sie die gewünschten Optionen:" 15 50 5 "${LOCALE_OPTIONS[@]}" 3>&1 1>&2 2>&3)
 
 	# Ausgewählte Optionen ausgeben
-	echo "Sie haben folgende Optionen ausgewählt: $CHOOSEN_LOCALS"
+	echo "Sie haben folgende Optionen ausgewählt: $CHOSEN_LOCALS"
 
 	# Optionen für Whiptail-Checkliste erstellen
 	OPTIONS=()
@@ -316,7 +349,7 @@ function_installation_guide() {
 		# Check if line starts with a #
 		if [[ "$LINE" == \#* ]] ; then
 			# Check if the option is selected
-			if [[ "$LINE" == *\#${CHOOSEN_LOCALS}\#* ]] ; then
+			if [[ "$LINE" == *\#${CHOSEN_LOCALS}\#* ]] ; then
 				# Remove # from the line and add to options
 				LINE="${LINE:1}"
 			else
@@ -324,7 +357,7 @@ function_installation_guide() {
 			fi
 		else
 			# Check if the option is not selected
-			if [[ "$LINE" == *\#${CHOOSEN_LOCALS}\#* ]] ; then
+			if [[ "$LINE" == *\#${CHOSEN_LOCALS}\#* ]] ; then
 				LINE="${LINE:2}"
 			else
 				LINE="# $LINE"
@@ -342,9 +375,8 @@ function_installation_guide() {
 	LOCALS=$()
 	echo "System locals: $LOCALS"
 
-	## Define keymap (For German: KEYMAP=de-latin)
-	#KEYMAP=$()
-	KEYMAP="KEYMAP=de-latin"
+
+
 
 	## Define timezone (For German: ln -sf /usr/share/zoneinfo/Europe/Berlin /etc/localtime)
 	#TIMEZONE=$()
@@ -358,10 +390,7 @@ function_installation_guide() {
 
 	### User Configuration
 
-	## Root password
-	ROOTPASS=$(function_password)
-
-	function_select
+	function_select_root_credentials
 
 	function_select_user_credentials
 
@@ -373,16 +402,9 @@ function_installation_guide() {
 
 	function_select_portable_device_optimization
 
-	## Configuration of system wide theming
-	CHOOSEN_THEME=$(whiptail --title "Theming" --radiolist "Which system wide theme do you prefer?" 32 128 16 \
-	\
-	'Default'				'Default theme - No modifications'	on	\
-	'Catppuccin Latte'		'Light theme'						off	\
-	'Catppuccin Frappé'		'Light dark theme'					off	\
-	'Catppuccin Macchiato'	'Dark theme'						off	\
-	'Catppuccin Mocha'		'Dark dark theme'					off\
-	3>&1 1>&2 2>&3)
-	echo $CHOOSEN_THEME
+	function_select_theme
+
+
 
 
 	###
@@ -435,13 +457,20 @@ function_installation_guide() {
 			sed -i 's/#de_DE ISO-8859-1 /de_DE ISO-8859-1 /g' /mnt/etc/locale.gen
 			sed -i 's/#de_DE@euro ISO-8859-15 /de_DE@euro ISO-8859-15 /g' /mnt/etc/locale.gen)
 
+
+
 			## Set keymap
-			echo $KEYMAP > /mnt/etc/vconsole.conf
+			arch-chroot /mnt/ localectl set-keymap "$CHOSEN_SYSTEM_KEYBOARD_LAYOUT"
+			arch-chroot /mnt/ localectl set-x11-keymap "$CHOSEN_SYSTEM_KEYBOARD_LAYOUT"
+			sed -i "s/KEYMAP=.*/KEYMAP=$CHOSEN_SYSTEM_KEYBOARD_LAYOUT/" /mnt/etc/vconsole.conf
+			# Output the selected keyboard layout
+			echo "The selected keyboard layout is: $(arch-chroot /mnt/ localectl status | grep "VC Keymap" | awk '{print $3}')"
+
+
 
 			## Set timezone
 			ln -sf $TIMEZONE /mnt/etc/localtime
 			arch-chroot /mnt/ timedatectl set-local-rtc 0 # set hardware clock
-
 
 
 
@@ -506,7 +535,7 @@ function_installation_guide() {
 			fi
 			
 			## Install Userspace
-			for i in ${CHOOSEN_USERSPACE[@]}
+			for i in ${CHOSEN_USERSPACE[@]}
 			do
 				case $i in
 					Plasma)
@@ -549,38 +578,38 @@ function_installation_guide() {
 			done
 
 			## Install / Set Login-Manager
-			if [ $CHOOSEN_LOGINMANAGER == "SDDM" ]; then
+			if [ $CHOSEN_LOGINMANAGER == "SDDM" ]; then
 					echo "Set LightDM as Login-Manager..."
 					arch-chroot /mnt/ systemctl enable sddm
-				elif [ $CHOOSEN_LOGINMANAGER == "GDM" ]; then
+				elif [ $CHOSEN_LOGINMANAGER == "GDM" ]; then
 					echo "Set LightDM as Login-Manager..."
 					arch-chroot /mnt/ systemctl enable gdm
-				elif [ $CHOOSEN_LOGINMANAGER == "LightDM" ]; then
+				elif [ $CHOSEN_LOGINMANAGER == "LightDM" ]; then
 					echo "Set LightDM as Login-Manager..."ryzen 5625 u
 					arch-chroot /mnt/ systemctl enable lightdm
 			fi
 
 
 			## Install / Set system theme
-			if [ $CHOOSEN_THEME == "Default" ]; then
+			if [ $CHOSEN_THEME == "Default" ]; then
 					echo "Set system theme to Default..."
-				elif [ $CHOOSEN_THEME == "Catppuccin Latte" ]; then
+				elif [ $CHOSEN_THEME == "Catppuccin Latte" ]; then
 					echo "Set system theme to Catppuccin Latte..."
 					
-				elif [ $CHOOSEN_THEME == "Catppuccin Frappé" ]; then
+				elif [ $CHOSEN_THEME == "Catppuccin Frappé" ]; then
 					echo "Set system theme to Catppuccin Frappé..."
 
-				elif [ $CHOOSEN_THEME == "Catppuccin Macchiato" ]; then
+				elif [ $CHOSEN_THEME == "Catppuccin Macchiato" ]; then
 					echo "Set system theme to Catppuccin Macchiato..."
 
-				elif [ $CHOOSEN_THEME == "Catppuccin Mocha" ]; then
+				elif [ $CHOSEN_THEME == "Catppuccin Mocha" ]; then
 					echo "Set system theme to Catppuccin Mocha..."
 
 			fi
 
 
 			## Install Userspace PKGs
-			for i in ${CHOOSEN_USERPACKAGES[@]}
+			for i in ${CHOSEN_USERPACKAGES[@]}
 			do
 				case $i in
 					"Base")

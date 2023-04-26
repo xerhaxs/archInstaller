@@ -1,6 +1,7 @@
 element-desktop
 gnunet
 monero-gui
+mullvad-vpn-bin
 onionshare
 portmaster-stub-bin
 session-desktop-bin
