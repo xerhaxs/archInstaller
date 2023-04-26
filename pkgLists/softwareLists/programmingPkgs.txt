@@ -1,3 +1,4 @@
+godot
 intellij-idea-community-edition
 jdk-openjdk
 jdk8-openjdk

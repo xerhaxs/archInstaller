@@ -64,6 +64,7 @@ plasma5-wallpapers-wallpaper-engine
 plymouth-kcm
 print-manager
 print-manager
+qt5-imageformats
 sddm
 sddm-kcm
 system-config-printer
