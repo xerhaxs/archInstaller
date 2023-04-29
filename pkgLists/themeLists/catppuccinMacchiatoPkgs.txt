@@ -1,0 +1,3 @@
+catppuccin-gtk-theme-macchiato
+plymouth-theme-catppuccin-macchiato-git
+catppuccin-macchiato-grub-theme-git

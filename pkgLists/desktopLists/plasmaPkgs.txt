@@ -7,6 +7,7 @@ akonadi-import-wizard
 akonadiconsole
 ark
 calendarsupport
+catppuccin-kde-theme-git
 dolphin
 dolphin-plugins
 extra-cmake-modules

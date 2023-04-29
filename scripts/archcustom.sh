@@ -583,6 +583,7 @@ function_installation_guide() {
 			if [ $CHOSEN_LOGINMANAGER == "SDDM" ]; then
 					echo "Set LightDM as Login-Manager..."
 					arch-chroot /mnt/ systemctl enable sddm
+					arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm sddm-catppuccin-git
 				elif [ $CHOSEN_LOGINMANAGER == "GDM" ]; then
 					echo "Set LightDM as Login-Manager..."
 					arch-chroot /mnt/ systemctl enable gdm
@@ -591,40 +592,39 @@ function_installation_guide() {
 					arch-chroot /mnt/ systemctl enable lightdm
 			fi
 
-
-sddm-catppuccin-git
-catppuccin-kde-theme-git
-catppuccin-gtk-theme-mocha
-catppuccin-gtk-theme-macchiato
-catppuccin-gtk-theme-frappe
-catppuccin-gtk-theme-latte
-
 			## Install / Set system theme
+			arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/themeLists/themePkgs.txt
 			if [ $CHOSEN_THEME == "Default" ]; then
 					echo "Set system theme to Default..."
-
 				elif [ $CHOSEN_THEME == "Catppuccin Latte" ]; then
 					echo "Set system theme to Catppuccin Latte..."
-					arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm plymouth-theme-catppuccin-latte-git
 					arch-chroot /mnt/ plymouth-set-default-theme -R catppuccin-latte
-					
+					arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/themeLists/catppuccinLatte.txt
+					ln -sf ”/usr/share/themes/Catppuccin-Latte-Standard-Mauve-Dark/gtk-4.0/assets” ”/usr/share/gtk-4.0/assets”
+					ln -sf ”/usr/share/themes/Catppuccin-Latte-Standard-Mauve-Dark/gtk-4.0/gtk.css” ”/usr/share/gtk-4.0/gtk.css”
+					ln -sf "/usr/share/themes/Catppuccin-Latte-Standard-Mauve-Dark/gtk-4.0/gtk-dark.css” "/usr/share/gtk-4.0/gtk-dark.css”
 				elif [ $CHOSEN_THEME == "Catppuccin Frappé" ]; then
 					echo "Set system theme to Catppuccin Frappé..."
-					arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm plymouth-theme-catppuccin-frappe-git
 					arch-chroot /mnt/ plymouth-set-default-theme -R catppuccin-frappe
-
+					arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/themeLists/catppuccinFrappePkgs.txt
+					ln -sf ”/usr/share/themes/Catppuccin-Frappe-Standard-Mauve-Dark/gtk-4.0/assets” ”/usr/share/gtk-4.0/assets”
+					ln -sf ”/usr/share/themes/Catppuccin-Frappe-Standard-Mauve-Dark/gtk-4.0/gtk.css” ”/usr/share/gtk-4.0/gtk.css”
+					ln -sf "/usr/share/themes/Catppuccin-Frappe-Standard-Mauve-Dark/gtk-4.0/gtk-dark.css” "/usr/share/gtk-4.0/gtk-dark.css”
 				elif [ $CHOSEN_THEME == "Catppuccin Macchiato" ]; then
 					echo "Set system theme to Catppuccin Macchiato..."
-					arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm plymouth-theme-catppuccin-macchiato-git
 					arch-chroot /mnt/ plymouth-set-default-theme -R catppuccin-macchiato
-
+					arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/themeLists/catppuccinMacchiatoPkgs.txt
+					ln -sf ”/usr/share/themes/Catppuccin-Macchiato-Standard-Mauve-Dark/gtk-4.0/assets” ”/usr/share/gtk-4.0/assets”
+					ln -sf ”/usr/share/themes/Catppuccin-Macchiato-Standard-Mauve-Dark/gtk-4.0/gtk.css” ”/usr/share/gtk-4.0/gtk.css”
+					ln -sf "/usr/share/themes/Catppuccin-Macchiato-Standard-Mauve-Dark/gtk-4.0/gtk-dark.css” "/usr/share/gtk-4.0/gtk-dark.css”
 				elif [ $CHOSEN_THEME == "Catppuccin Mocha" ]; then
 					echo "Set system theme to Catppuccin Mocha..."
-					arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm plymouth-theme-catppuccin-Mocha-git
+					arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/themeLists/catppuccinMochaPkgs.txt
 					arch-chroot /mnt/ plymouth-set-default-theme -R catppuccin-mocha
-
+					ln -sf ”/usr/share/themes/Catppuccin-Mocha-Standard-Mauve-Dark/gtk-4.0/assets” ”/usr/share/gtk-4.0/assets”
+					ln -sf ”/usr/share/themes/Catppuccin-Mocha-Standard-Mauve-Dark/gtk-4.0/gtk.css” ”/usr/share/gtk-4.0/gtk.css”
+					ln -sf "/usr/share/themes/Catppuccin-Mocha-Standard-Mauve-Dark/gtk-4.0/gtk-dark.css” "/usr/share/gtk-4.0/gtk-dark.css”
 			fi
-
 
 			## Install Userspace PKGs
 			for i in ${CHOSEN_USERPACKAGES[@]}

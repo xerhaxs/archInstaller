@@ -1,0 +1,3 @@
+catppuccin-gtk-theme-frappe
+plymouth-theme-catppuccin-frappe-git
+catppuccin-frappe-grub-theme-git

@@ -1,0 +1,3 @@
+catppuccin-gtk-theme-latte
+plymouth-theme-catppuccin-latte-git
+catppuccin-latte-grub-theme-git
