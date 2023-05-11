@@ -1,11 +1,8 @@
-base
-base-devel
 dosfstools
+efibootmgr
 gptfdisk
-lvm2
+grub
 lshw
-linux
-linux-firmware
 dhcp
 firewalld
 git

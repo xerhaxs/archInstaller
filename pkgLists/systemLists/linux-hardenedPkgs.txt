@@ -1,0 +1,6 @@
+base
+base-devel
+linux-hardened
+linux-firmware
+linux-hardened-headers
+lvm2

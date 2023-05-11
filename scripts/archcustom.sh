@@ -160,6 +160,19 @@ function_system_keyboard_layout() {
 	CHOSEN_SYSTEM_KEYBOARD_LAYOUT=$(whiptail --title "Select Keyboard Layout" --radiolist "Chose your keyboard layout:" 32 128 16 "${LAYOUT_MENU_LIST[@]}" 3>&1 1>&2 2>&3)
 }
 
+## Function to set the Timzone for the installation system
+function_select_timezone() {
+	# Get list of timezones
+	TIMEZONELIST=$(timedatectl list-timezones)
+	# Show radiolist
+
+	TIMEZONE=$(whiptail --title "Timezone" --radiolist \
+	"Choose your timezone:" 32 128 16 \
+	$(for TZ in $TIMEZONELIST; do \
+		echo $TZ \"\" off; \
+	done) 3>&1 1>&2 2>&3)
+}
+
 ## Function to set the root credentials
 function_select_root_credentials() {
 	ROOTPASS=$(function_password)
@@ -270,7 +283,7 @@ function_installation_guide() {
 	## Kernel and system configuration
 	CHOSEN_SYSTEM_TYPE=$(whiptail --title "Kernel and System configuration" --menu "Which Kernel option do you prefer?" 32 128 4 \
 	"Basic" 	"Everything will be installed on one partition. No security modules or special modifications. Normal Kernel." \
-	"Zen" 		"Everything will be installed on one partition. The Zen-Kernel will be used." \
+	"Zen" 		"Everything will be installed on one partition. The Zen-Kernel will be used. Some tweaks for better performence will be made." \
 	"LTS"		"Everything will be installed on one partition. The LTS-Kernel will be used." \
 	"Hardened"	"The system will be a Fort Nox for your data. The system will be installed with SeLinux, Full Diks Encryption etc." 3>&1 1>&2 2>&3)
 	if [ $CHOSEN_SYSTEM_TYPE == "Basic" ]; then
@@ -292,10 +305,96 @@ function_installation_guide() {
 
 	function_select_installation_disk
 
-	parted $CHOSEN_DRIVE mklabel gpt \
-		mkpart primary fat32 1MiB 512MiB \
-		set 1 esp on \
-		mkpart primary ext4 512MiB 100%
+	
+## Standard partition layout
+function_partition_basic() {
+	parted $CHOSEN_DRIVE mklabel gpt
+	parted $CHOSEN_DRIVE mkpart primary fat32 1MiB 513MiB
+	parted $CHOSEN_DRIVE set 1 esp on
+	parted $CHOSEN_DRIVE mkpart primary ext4 513MiB 100%
+
+	BOOT_DRIVE=$CHOSEN_DRIVE"1"
+	ROOT_DRIVE=$CHOSEN_DRIVE"2"
+
+	mkfs.fat -F 32 -n uefi $BOOT_DRIVE
+	mkfs.ext4 -L system $SYSTEM_DRIVE
+
+	mount $SYSTEM_DRIVE /mnt/
+	mkdir /mnt/boot
+	mount $BOOT_DRIVE
+}
+
+function_partition_hardened() {
+	
+
+	## Load encryptin tools
+	modprobe dm-crypt
+	
+	## Create GPT partition type
+	parted $CHOSEN_DRIVE mklabel gpt
+
+	## Create EFI partition
+	parted $CHOSEN_DRIVE mkpart primary fat32 1MiB 513MiB
+	parted $CHOSEN_DRIVE set 1 esp on
+
+	## Create Root + Boot partition
+	parted $CHOSEN_DRIVE --script mkpart primary ext4 513MiB 50%
+	cryptsetup -c aes-xts-plain -y -s 512 luksFormat --type luks1 $CRYPT_ROOT_DRIVE
+	cryptsetup luksOpen $CRYPT_ROOT_DRIVE
+	mkfs.ext4 -L /dev/mapper/crypt-root
+	mkfs.ext4 -L root 
+
+	## Create Home partition
+	parted $CHOSEN_DRIVE mkpart primary 50% 100%
+	
+
+	EFI_DRIVE=$CHOSEN_DRIVE"1"
+	CRYPT_ROOT_DRIVE=$CHOSEN_DRIVE"2"
+	CRYPT_HOME_DRIVE=$CHOSEN_DRIVE"3"
+
+	
+	cryptsetup open $CRYPT_DRIVE cryptlvm
+}
+
+## Basic Linux Kernel
+function_kernel_linux() {
+
+	pacstrap /mnt - < pkgLists/systemLists/linuxPkgs.txt
+	pacstrap /mnt - < pkgLists/systemLists/corePkgs.txt 
+}
+
+## LTS Linux Kernel
+function_kernel_linux_lts() {
+	pacstrap /mnt - < pkgLists/systemLists/linux-ltsPkgs.txt
+	pacstrap /mnt - < pkgLists/systemLists/corePkgs.txt 
+
+}
+
+## Zen Linux Kernel
+function_kernel_linux_zen() {
+	pacstrap /mnt - < pkgLists/systemLists/linux-zenPkgs.txt
+	pacstrap /mnt - < pkgLists/systemLists/corePkgs.txt 
+
+}
+
+## Hardened Linux Kernel
+function_kernel_linux_hardened() {
+	pacstrap /mnt - < pkgLists/systemLists/linux-hardenedPkgs.txt
+	pacstrap /mnt - < pkgLists/systemLists/corePkgs.txt 
+
+}
+
+
+
+	
+
+
+	## Test for UEFI
+	ls /sys/firmware/efi/efivars
+
+	## Secure erasure of the drive
+	dd if=$CHOSEN_DRIVE of=/dev/zero status=progress
+
 
 
 
@@ -378,15 +477,8 @@ function_installation_guide() {
 
 
 
-	## Define timezone (For German: ln -sf /usr/share/zoneinfo/Europe/Berlin /etc/localtime)
-	#TIMEZONE=$()
-	TIMEZONE="/usr/share/zoneinfo/Europe/Berlin"
-
-
-
-
-
-	
+	## Define timezone
+	function_select_timezone
 
 	### User Configuration
 
@@ -430,7 +522,7 @@ function_installation_guide() {
 			### Hardware Configuration
 
 			## Install core packages
-			pacstrap /mnt - < pkgLists/systemLists/corePkgs.txt
+			
 
 			# Generate fstab
 			genfstab -Lp /mnt > /mnt/etc/fstab
@@ -468,8 +560,10 @@ function_installation_guide() {
 
 
 
+
+
 			## Set timezone
-			ln -sf $TIMEZONE /mnt/etc/localtime
+			ln -sf /usr/share/zoneinfo/$TIMEZONE /mnt/etc/localtime
 			arch-chroot /mnt/ timedatectl set-local-rtc 0 # set hardware clock
 
 
@@ -598,22 +692,22 @@ function_installation_guide() {
 					echo "Set system theme to Default..."
 				elif [ $CHOSEN_THEME == "Catppuccin Latte" ]; then
 					echo "Set system theme to Catppuccin Latte..."
+					arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/themeLists/catppuccinLattePkgs.txt
 					arch-chroot /mnt/ plymouth-set-default-theme -R catppuccin-latte
-					arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/themeLists/catppuccinLatte.txt
 					ln -sf ”/usr/share/themes/Catppuccin-Latte-Standard-Mauve-Dark/gtk-4.0/assets” ”/usr/share/gtk-4.0/assets”
 					ln -sf ”/usr/share/themes/Catppuccin-Latte-Standard-Mauve-Dark/gtk-4.0/gtk.css” ”/usr/share/gtk-4.0/gtk.css”
 					ln -sf "/usr/share/themes/Catppuccin-Latte-Standard-Mauve-Dark/gtk-4.0/gtk-dark.css” "/usr/share/gtk-4.0/gtk-dark.css”
 				elif [ $CHOSEN_THEME == "Catppuccin Frappé" ]; then
 					echo "Set system theme to Catppuccin Frappé..."
-					arch-chroot /mnt/ plymouth-set-default-theme -R catppuccin-frappe
 					arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/themeLists/catppuccinFrappePkgs.txt
+					arch-chroot /mnt/ plymouth-set-default-theme -R catppuccin-frappe
 					ln -sf ”/usr/share/themes/Catppuccin-Frappe-Standard-Mauve-Dark/gtk-4.0/assets” ”/usr/share/gtk-4.0/assets”
 					ln -sf ”/usr/share/themes/Catppuccin-Frappe-Standard-Mauve-Dark/gtk-4.0/gtk.css” ”/usr/share/gtk-4.0/gtk.css”
 					ln -sf "/usr/share/themes/Catppuccin-Frappe-Standard-Mauve-Dark/gtk-4.0/gtk-dark.css” "/usr/share/gtk-4.0/gtk-dark.css”
 				elif [ $CHOSEN_THEME == "Catppuccin Macchiato" ]; then
 					echo "Set system theme to Catppuccin Macchiato..."
-					arch-chroot /mnt/ plymouth-set-default-theme -R catppuccin-macchiato
 					arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/themeLists/catppuccinMacchiatoPkgs.txt
+					arch-chroot /mnt/ plymouth-set-default-theme -R catppuccin-macchiato
 					ln -sf ”/usr/share/themes/Catppuccin-Macchiato-Standard-Mauve-Dark/gtk-4.0/assets” ”/usr/share/gtk-4.0/assets”
 					ln -sf ”/usr/share/themes/Catppuccin-Macchiato-Standard-Mauve-Dark/gtk-4.0/gtk.css” ”/usr/share/gtk-4.0/gtk.css”
 					ln -sf "/usr/share/themes/Catppuccin-Macchiato-Standard-Mauve-Dark/gtk-4.0/gtk-dark.css” "/usr/share/gtk-4.0/gtk-dark.css”

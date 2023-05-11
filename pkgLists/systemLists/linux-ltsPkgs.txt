@@ -1,0 +1,5 @@
+base
+base-devel
+linux-lts
+linux-firmware
+linux-lts-headers

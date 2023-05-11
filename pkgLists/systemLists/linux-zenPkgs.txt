@@ -1,0 +1,5 @@
+base
+base-devel
+linux-zen
+linux-firmware
+linux-zen-headers

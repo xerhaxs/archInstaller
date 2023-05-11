@@ -12,4 +12,5 @@ kmymoney
 open-numismat-bin
 openrgb-bin
 qtqr
+testdisk
 vdhcoapp-bin

@@ -1,6 +1,7 @@
 antimicrox
 gamemode
 heroic-games-launcher-bin
+jdk8-openjdk
 lib32-gamemode
 lutris
 mangohud
