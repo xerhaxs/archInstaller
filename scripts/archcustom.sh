@@ -551,10 +551,10 @@ function_installation_guide() {
 
 
 			## Install yay package manager
-			mkdir /mnt/tmp/build
-			cd /mnt/tmp/build
+			mkdir /mnt/build
+			cd /mnt/build
 			git clone https://aur.archlinux.org/yay.git
-			arch-chroot /mnt/ chown -R $USERNAME /tmp/build
+			arch-chroot /mnt/ chown -R $USERNAME /build
 			arch-chroot /mnt/ cd yay
 			arch-chroot /mnt/ sudo -u $USERNAME makepkg -si --noconfirm
 	
