@@ -54,7 +54,7 @@ function_kbd_load() {
 
 	while IFS= read -r KBD_LINE; do
 		KBD_OPTIONS+=("$KBD_LINE" "")
-	done < <(localectl list-x11-keymap-layouts)
+	done < <(localectl list-keymaps)
 
 	CHOSEN_KBD_LAYOUT=$(whiptail --title "Keyboard Layout" --menu "Pick your keyboard layout (This keyboard layout will only be used during the installation process.)" 32 128 16 "${KBD_OPTIONS[@]}" 3>&1 1>&2 2>&3)
 	loadkeys $CHOSEN_KBD_LAYOUT
@@ -124,6 +124,15 @@ function_detect_gpu() {
 	fi
 }
 
+## Kernel and system configuration
+function_select_system_type() {
+	CHOSEN_SYSTEM_TYPE=$(whiptail --title "Kernel and System configuration" --menu "Which Kernel option do you prefer?" 32 128 4 \
+	"Basic" 	"Everything will be installed on one partition. No security modules or special modifications. Normal Kernel." \
+	"Zen" 		"Everything will be installed on one partition. The Zen-Kernel will be used. Some tweaks for better performence will be made." \
+	"LTS"		"Everything will be installed on one partition. The LTS-Kernel will be used." \
+	"Hardened"	"The system will be a Fort Nox for your data. The system will be installed with SeLinux, Full Diks Encryption etc." 3>&1 1>&2 2>&3)
+}
+
 ## Function to set installation disk
 function_select_installation_disk() {
 	DISKS=$(lsblk | grep disk | awk '{print $1}')
@@ -131,18 +140,114 @@ function_select_installation_disk() {
 	DISK_OPTIONS=()
 	for DISK in $DISKS; do
 		DISK_SIZE=$(lsblk "/dev/$DISK" | grep disk | awk '{print $4}')
-		DISK_OPTIONS+=("Disk: /dev/$DISK" "Size: $DISK_SIZE")
+		DISK_OPTIONS+=("/dev/$DISK" "$DISK_SIZE")
 	done
 
 	CHOSEN_DRIVE=$(whiptail --title "Menu selected Drive" --menu "Where should Arch Linux be installed?" 32 128 16 "${DISK_OPTIONS[@]}" 3>&1 1>&2 2>&3)
 
-	echo "CHOSEN Disk: $CHOSEN_DRIVE"
+	echo "$CHOSEN_DRIVE"
+}
+
+## Standard partition layout
+function_partition_basic() {
+	parted $CHOSEN_DRIVE mklabel gpt
+	parted $CHOSEN_DRIVE mkpart primary fat32 1MiB 513MiB
+	parted $CHOSEN_DRIVE set 1 esp on
+	parted $CHOSEN_DRIVE mkpart primary btrfs 513MiB 100%
+
+	BOOT_DRIVE=$CHOSEN_DRIVE"1"
+	SYSTEM_DRIVE=$CHOSEN_DRIVE"2"
+
+	mkfs.fat -F 32 -n UEFI $BOOT_DRIVE
+	mkfs.btrfs -L system -n 32k $SYSTEM_DRIVE
+
+	mount $SYSTEM_DRIVE /mnt
+	mkdir /mnt/boot
+	mount $BOOT_DRIVE /mnt/boot
+}
+
+
+## Hardened partition layout
+function_partition_hardened() {
+	
+
+	## Load encryptin tools
+	modprobe dm-crypt
+	
+	## Create GPT partition type
+	parted $CHOSEN_DRIVE mklabel gpt
+
+	## Create EFI partition
+	parted $CHOSEN_DRIVE mkpart primary fat32 1MiB 513MiB
+	parted $CHOSEN_DRIVE set 1 esp on
+	EFI_DRIVE=$CHOSEN_DRIVE"1"
+
+	## Create Root + Boot partition
+	parted $CHOSEN_DRIVE --script mkpart primary ext4 513MiB 50%
+	CRYPT_ROOT_DRIVE=$CHOSEN_DRIVE"2"
+	cryptsetup -c aes-xts-plain -y -s 512 luksFormat --type luks1 $CRYPT_ROOT_DRIVE
+	cryptsetup luksOpen $CRYPT_ROOT_DRIVE
+	mkfs.ext4 -L /dev/mapper/crypt-root
+	mkfs.ext4 -L root 
+
+	## Create Home partition
+	parted $CHOSEN_DRIVE mkpart primary 50% 100%
+	CRYPT_HOME_DRIVE=$CHOSEN_DRIVE"3"
+
+	
+	
+	
+
+	mount $CRYPT_ROOT_DRIVE /mnt/
+	mkdir /mnt/efi/
+	mount $EFI_DRIVE /mnt/efi
+
+	
+	cryptsetup open $CRYPT_DRIVE cryptlvm
 }
 
 ## Function to set the hostname
 function_select_hostname() {
 	HOSTNAME=$(whiptail --title "Set Hostname" --inputbox "Chose the Hostname of the computer." 32 128 3>&1 1>&2 2>&3)
 	echo "Hostname: $HOSTNAME"
+}
+
+## Function to set the Timzone for the installation system
+function_select_timezone() {
+	# Get list of timezones
+	TIMEZONELIST=$(timedatectl list-timezones)
+	# Show radiolist
+
+	TIMEZONE=$(whiptail --title "Timezone" --radiolist \
+	"Choose your timezone:" 32 128 16 \
+	$(for TZ in $TIMEZONELIST; do \
+		echo $TZ \"\" off; \
+	done) 3>&1 1>&2 2>&3)
+}
+
+## Function to set the locales
+function_system_local() {
+	# File path to the locale file
+	LOCALE_FILE="/etc/locale.gen"
+
+	# to beginning of lines that don't start with #
+	sed -i '/^[^#]/ s/^/#/' "$LOCALE_FILE"
+
+	# Read the file and generate an array of locales
+	IFS=$'\n' LOCALES=($(tail -n +18 "$LOCALE_FILE" | sed '/^$/d')) # Ignore the first 17 lines and empty lines
+	OPTIONS=() # Initialize an array to store the dialog options
+	for LOCALE in "${LOCALES[@]}"; do
+	if [[ "$LOCALE" =~ ^#.*$ ]]; then
+		OPTIONS+=("$LOCALE" "" Off)
+	else
+		OPTIONS+=("$LOCALE" "" On)
+	fi
+	done
+
+	# Generate the whiptail menu and save the results as an array
+	SELECTED_LOCALE=$(whiptail --title "Select Locale" --radiolist "Choose your locale:" 20 78 10 "${OPTIONS[@]}" 3>&1 1>&2 2>&3)
+
+	echo "Locale set to $SELECTED_LOCALE"
 }
 
 ## Function to set the system keyboard layout
@@ -158,19 +263,6 @@ function_system_keyboard_layout() {
 
 	# Show the Whiptail menu and set the keyboard layout
 	CHOSEN_SYSTEM_KEYBOARD_LAYOUT=$(whiptail --title "Select Keyboard Layout" --radiolist "Chose your keyboard layout:" 32 128 16 "${LAYOUT_MENU_LIST[@]}" 3>&1 1>&2 2>&3)
-}
-
-## Function to set the Timzone for the installation system
-function_select_timezone() {
-	# Get list of timezones
-	TIMEZONELIST=$(timedatectl list-timezones)
-	# Show radiolist
-
-	TIMEZONE=$(whiptail --title "Timezone" --radiolist \
-	"Choose your timezone:" 32 128 16 \
-	$(for TZ in $TIMEZONELIST; do \
-		echo $TZ \"\" off; \
-	done) 3>&1 1>&2 2>&3)
 }
 
 ## Function to set the root credentials
@@ -253,10 +345,41 @@ function_select_theme() {
 
 ## Function to configurate the timeshift backup system
 function_timeshift_setup() {
-	#
-	#
-	#
-	#
+	# Set the backup directory
+	backup_dir="/mnt/backup"
+
+	# Set the backup frequency
+	backup_frequency=$(whiptail --title "Backup Frequency" --menu "Choose how often you want to backup:" 15 60 4 \
+			"1" "Daily" \
+			"2" "Weekly" \
+			"3" "Monthly" \
+			"4" "Yearly" 3>&1 1>&2 2>&3)
+
+	# Set the backup time
+	backup_time=$(whiptail --title "Backup Time" --inputbox "Enter the time you want to backup (HH:MM):" 10 60 3>&1 1>&2 2>&3)
+
+	# Set the backup retention period
+	backup_retention=$(whiptail --title "Backup Retention Period" --inputbox "Enter the number of backups you want to keep:" 10 60 3>&1 1>&2 2>&3)
+
+	# Create the backup schedule
+	case $backup_frequency in
+		"1") cron_schedule="0 $backup_time * * *";;
+		"2") cron_schedule="0 $backup_time * * 0";;
+		"3") cron_schedule="0 $backup_time 1 * *";;
+		"4") cron_schedule="0 $backup_time 1 1 *";;
+	esac
+
+	# Create the backup script
+	echo "#!/bin/bash" > /usr/local/bin/timeshift-backup.sh
+	echo "" >> /usr/local/bin/timeshift-backup.sh
+	echo "# Run timeshift with the specified parameters" >> /usr/local/bin/timeshift-backup.sh
+	echo "/usr/bin/timeshift --create --comments \"Automated backup\" --tags DAILY --scripted --snapshot-device /dev/sda1 --snapshot-boot --exclude /mnt/backup/* --exclude /home/*/.cache/* --exclude /var/tmp/* --exclude /var/cache/* --exclude /var/log/* --exclude /var/backups/* --exclude /var/lib/docker/* --exclude /var/lib/snapd/*" >> /usr/local/bin/timeshift-backup.sh
+
+	# Make the script executable
+	chmod +x /usr/local/bin/timeshift-backup.sh
+
+	# Add the script to crontab
+	(crontab -l ; echo "$cron_schedule /usr/local/bin/timeshift-backup.sh") | crontab -
 }
 
 
@@ -272,213 +395,35 @@ function_timeshift_setup() {
 
 function_startup_message
 
-function_start_installation_guide
-
 ## Installation guide
 function_installation_guide() {
-
-
 	function_kbd_load
 
-	## Kernel and system configuration
-	CHOSEN_SYSTEM_TYPE=$(whiptail --title "Kernel and System configuration" --menu "Which Kernel option do you prefer?" 32 128 4 \
-	"Basic" 	"Everything will be installed on one partition. No security modules or special modifications. Normal Kernel." \
-	"Zen" 		"Everything will be installed on one partition. The Zen-Kernel will be used. Some tweaks for better performence will be made." \
-	"LTS"		"Everything will be installed on one partition. The LTS-Kernel will be used." \
-	"Hardened"	"The system will be a Fort Nox for your data. The system will be installed with SeLinux, Full Diks Encryption etc." 3>&1 1>&2 2>&3)
-	if [ $CHOSEN_SYSTEM_TYPE == "Basic" ]; then
-			KERNEL="linux linux-headers"
-			EXECUTING_CMDS+=("" "")
-		elif [ $CHOSEN_SYSTEM_TYPE == "Zen" ]; then
-			KERNEL="linux-zen linux-zen-headers"
-			EXECUTING_CMDS+=("" "")
-		elif [ $CHOSEN_SYSTEM_TYPE == "LTS" ]; then
-			KERNEL="linux-lts linux-lts-headers"
-			EXECUTING_CMDS+=("" "")
-		elif [ $CHOSEN_SYSTEM_TYPE == "Hardened" ]; then
-			KERNEL="linux-hardened linux-hardened-headers"
-			CHOSEN_INSTALL_LISTS+=()
-			EXECUTING_CMDS+=("" "")
-		else
-			whiptail --title "MESSAGE" --msgbox "User pressed ESC. Exiting the script" 32 128 3>&1 1>&2 2>&3
-	fi
-
 	function_select_installation_disk
-
-	
-## Standard partition layout
-function_partition_basic() {
-	parted $CHOSEN_DRIVE mklabel gpt
-	parted $CHOSEN_DRIVE mkpart primary fat32 1MiB 513MiB
-	parted $CHOSEN_DRIVE set 1 esp on
-	parted $CHOSEN_DRIVE mkpart primary ext4 513MiB 100%
-
-	BOOT_DRIVE=$CHOSEN_DRIVE"1"
-	ROOT_DRIVE=$CHOSEN_DRIVE"2"
-
-	mkfs.fat -F 32 -n uefi $BOOT_DRIVE
-	mkfs.ext4 -L system $SYSTEM_DRIVE
-
-	mount $SYSTEM_DRIVE /mnt/
-	mkdir /mnt/boot
-	mount $BOOT_DRIVE
-}
-
-function_partition_hardened() {
-	
-
-	## Load encryptin tools
-	modprobe dm-crypt
-	
-	## Create GPT partition type
-	parted $CHOSEN_DRIVE mklabel gpt
-
-	## Create EFI partition
-	parted $CHOSEN_DRIVE mkpart primary fat32 1MiB 513MiB
-	parted $CHOSEN_DRIVE set 1 esp on
-
-	## Create Root + Boot partition
-	parted $CHOSEN_DRIVE --script mkpart primary ext4 513MiB 50%
-	cryptsetup -c aes-xts-plain -y -s 512 luksFormat --type luks1 $CRYPT_ROOT_DRIVE
-	cryptsetup luksOpen $CRYPT_ROOT_DRIVE
-	mkfs.ext4 -L /dev/mapper/crypt-root
-	mkfs.ext4 -L root 
-
-	## Create Home partition
-	parted $CHOSEN_DRIVE mkpart primary 50% 100%
-	
-
-	EFI_DRIVE=$CHOSEN_DRIVE"1"
-	CRYPT_ROOT_DRIVE=$CHOSEN_DRIVE"2"
-	CRYPT_HOME_DRIVE=$CHOSEN_DRIVE"3"
-
-	
-	cryptsetup open $CRYPT_DRIVE cryptlvm
-}
-
-## Basic Linux Kernel
-function_kernel_linux() {
-
-	pacstrap /mnt - < pkgLists/systemLists/linuxPkgs.txt
-	pacstrap /mnt - < pkgLists/systemLists/corePkgs.txt 
-}
-
-## LTS Linux Kernel
-function_kernel_linux_lts() {
-	pacstrap /mnt - < pkgLists/systemLists/linux-ltsPkgs.txt
-	pacstrap /mnt - < pkgLists/systemLists/corePkgs.txt 
-
-}
-
-## Zen Linux Kernel
-function_kernel_linux_zen() {
-	pacstrap /mnt - < pkgLists/systemLists/linux-zenPkgs.txt
-	pacstrap /mnt - < pkgLists/systemLists/corePkgs.txt 
-
-}
-
-## Hardened Linux Kernel
-function_kernel_linux_hardened() {
-	pacstrap /mnt - < pkgLists/systemLists/linux-hardenedPkgs.txt
-	pacstrap /mnt - < pkgLists/systemLists/corePkgs.txt 
-
-}
-
-
-
-	
-
-
-	## Test for UEFI
-	ls /sys/firmware/efi/efivars
-
-	## Secure erasure of the drive
-	dd if=$CHOSEN_DRIVE of=/dev/zero status=progress
-
-
-
-
 
 	function_detect_microcode
 
 	function_detect_gpu
 
+	function_select_system_type
+
+
+	## Test for UEFI
+	#ls /sys/firmware/efi/efivars
+
+	## Secure erasure of the drive
+	#dd if=$CHOSEN_DRIVE of=/dev/zero status=progress
+
 	function_select_hostname
-
-
-
-
-
-
-	## Define language (For German: LANG=de_DE.UTF-8)
-	#LANG=$()
-	LANG="LANG=de_DE.UTF-8"
-	echo "System language: $LANG"
-
-	LOCALE_FILE="locale.gen"
-
-	LOCALE_OPTIONS=()
-	LOCALE_LINE_COUNT=0
-	while IFS= read -r LINE
-	do
-		((LOCALE_LINE_COUNT++))
-		if [ $LOCALE_LINE_COUNT -le 17 ] ; then
-			continue
-		fi
-		# Prüfen, ob die Zeile mit einem # beginnt
-		if [[ "$LINE" == "#"* ]] ; then
-			# Option mit "off" hinzufügen
-			LOCALE_OPTIONS+=("${LINE:1}" "" off)
-		else
-			# Option mit "on" hinzufügen
-			LOCALE_OPTIONS+=("$LINE" "" on)
-		fi
-	done < "$LOCALE_FILE"
-
-	# Whiptail-Checkliste anzeigen und Auswahl speichern
-	CHOSEN_LOCALS=$(whiptail --title "Textoptionen" --checklist "Wählen Sie die gewünschten Optionen:" 15 50 5 "${LOCALE_OPTIONS[@]}" 3>&1 1>&2 2>&3)
-
-	# Ausgewählte Optionen ausgeben
-	echo "Sie haben folgende Optionen ausgewählt: $CHOSEN_LOCALS"
-
-	# Optionen für Whiptail-Checkliste erstellen
-	OPTIONS=()
-	while IFS= read -r LINE
-	do
-		# Check if line starts with a #
-		if [[ "$LINE" == \#* ]] ; then
-			# Check if the option is selected
-			if [[ "$LINE" == *\#${CHOSEN_LOCALS}\#* ]] ; then
-				# Remove # from the line and add to options
-				LINE="${LINE:1}"
-			else
-				continue
-			fi
-		else
-			# Check if the option is not selected
-			if [[ "$LINE" == *\#${CHOSEN_LOCALS}\#* ]] ; then
-				LINE="${LINE:2}"
-			else
-				LINE="# $LINE"
-			fi
-		fi
-		OPTIONS+=("$LINE")
-	done < "$LOCALE_FILE"
-
-	
-
-	## Define locals (For German:
-	# sed -i 's/#de_DE.UTF-8 UTF-8/de_DE.UTF-8 UTF-8/g' /etc/locale.gen
-	# sed -i 's/#de_DE ISO-8859-1 /de_DE ISO-8859-1 /g' /etc/locale.gen
-	# sed -i 's/#de_DE@euro ISO-8859-15 /de_DE@euro ISO-8859-15 /g' /etc/locale.gen)
-	LOCALS=$()
-	echo "System locals: $LOCALS"
-
-
-
 
 	## Define timezone
 	function_select_timezone
+
+	## Locals
+	function_system_local
+
+	## Keyboard Layout
+	function_system_keyboard_layout
 
 	### User Configuration
 
@@ -520,14 +465,36 @@ function_kernel_linux_hardened() {
 			### Execute every command to install the operation system
 
 			### Hardware Configuration
-
 			## Install core packages
+			if [ $CHOSEN_SYSTEM_TYPE == "Basic" ]; then
+					function_partition_basic
+					pacstrap /mnt - < pkgLists/systemLists/linuxPkgs.txt
+					pacstrap /mnt - < pkgLists/systemLists/corePkgs.txt
+					MKINIT_KERNEL="mkinitcpio -p linux"
+					grub-install --target=x86_64-efi --efi-directory=esp --bootloader-id=GRUB
+				elif [ $CHOSEN_SYSTEM_TYPE == "Zen" ]; then
+					function_partition_basic
+					pacstrap /mnt - < pkgLists/systemLists/linux-ltsPkgs.txt
+					pacstrap /mnt - < pkgLists/systemLists/corePkgs.txt
+					MKINIT_KERNEL="mkinitcpio -p linux-lts"
+					grub-install --target=x86_64-efi --efi-directory=esp --bootloader-id=GRUB
+				elif [ $CHOSEN_SYSTEM_TYPE == "LTS" ]; then
+					function_partition_basic
+					pacstrap /mnt - < pkgLists/systemLists/linux-zenPkgs.txt
+					pacstrap /mnt - < pkgLists/systemLists/corePkgs.txt
+					MKINIT_KERNEL="mkinitcpio -p linux-zen"
+					grub-install --target=x86_64-efi --efi-directory=esp --bootloader-id=GRUB
+				elif [ $CHOSEN_SYSTEM_TYPE == "Hardened" ]; then
+					function_partition_hardened
+					pacstrap /mnt - < pkgLists/systemLists/linux-hardenedPkgs.txt
+					pacstrap /mnt - < pkgLists/systemLists/corePkgs.txt 
+					MKINIT_KERNEL="mkinitcpio -p linux-hardened"
+					#grub-install --target=x86_64-efi --efi-directory=esp --bootloader-id=GRUB
+			fi
 			
-
 			# Generate fstab
 			genfstab -Lp /mnt > /mnt/etc/fstab
 			
-
 			### System Configuration
 
 			## Enable sudo without password for user(s) during installation
@@ -537,36 +504,22 @@ function_kernel_linux_hardened() {
 			## Set hostname
 			echo $HOSTNAME > /mnt/etc/hostname
 
-
-
-
+			## Enable local
+			MNT_LOCALE_FILE="/mnt/etc/locale.gen"
+			sed -i "/^$SELECTED_LOCALE/s/^#//" "$MNT_LOCALE_FILE"
 
 			## Set language
-			echo $LANG > /mnt/etc/locale.conf
-
-			## Set locals
-			sed -i 's/#de_DE.UTF-8 UTF-8/de_DE.UTF-8 UTF-8/g' /mnt/etc/locale.gen
-			sed -i 's/#de_DE ISO-8859-1 /de_DE ISO-8859-1 /g' /mnt/etc/locale.gen
-			sed -i 's/#de_DE@euro ISO-8859-15 /de_DE@euro ISO-8859-15 /g' /mnt/etc/locale.gen)
-
-
+			echo "LANG=$SELECTED_LOCALE" > /mnt/etc/locale.conf	
 
 			## Set keymap
 			arch-chroot /mnt/ localectl set-keymap "$CHOSEN_SYSTEM_KEYBOARD_LAYOUT"
-			arch-chroot /mnt/ localectl set-x11-keymap "$CHOSEN_SYSTEM_KEYBOARD_LAYOUT"
 			sed -i "s/KEYMAP=.*/KEYMAP=$CHOSEN_SYSTEM_KEYBOARD_LAYOUT/" /mnt/etc/vconsole.conf
 			# Output the selected keyboard layout
 			echo "The selected keyboard layout is: $(arch-chroot /mnt/ localectl status | grep "VC Keymap" | awk '{print $3}')"
 
-
-
-
-
 			## Set timezone
-			ln -sf /usr/share/zoneinfo/$TIMEZONE /mnt/etc/localtime
-			arch-chroot /mnt/ timedatectl set-local-rtc 0 # set hardware clock
-
-
+			ln -sf /mnt/usr/share/zoneinfo/$TIMEZONE /mnt/etc/localtime
+			arch-chroot /mnt/ timedatectl set-local-rtc 0 # set hardware clock to UTC
 
 			## Generate localisation settings
 			arch-chroot /mnt/ locale-gen
@@ -587,13 +540,20 @@ function_kernel_linux_hardened() {
 			## Enable chaotic-aur
 			arch-chroot /mnt/ pacman-key --recv-key FBA220DFC880C036 --keyserver keyserver.ubuntu.com
 			arch-chroot /mnt/ pacman-key --lsign-key FBA220DFC880C036
-			arch-chroot /mnt/ pacman -U 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-keyring.pkg.tar.zst' 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-mirrorlist.pkg.tar.zst'
+			arch-chroot /mnt/ pacman -U --noconfirm 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-keyring.pkg.tar.zst' 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-mirrorlist.pkg.tar.zst'
 			echo -e "[chaotic-aur] \nInclude = /etc/pacman.d/chaotic-mirrorlist" | tee -a /mnt/etc/pacman.conf
+
+			## Update mirror lists by speed
+			#cp /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.backup
+
+
+
+
 
 			## Install yay package manager
 			mkdir /mnt/tmp/build
 			cd /mnt/tmp/build
-			arch-chroot /mnt/ git clone https://aur.archlinux.org/yay.git
+			git clone https://aur.archlinux.org/yay.git
 			arch-chroot /mnt/ chown -R $USERNAME /tmp/build
 			arch-chroot /mnt/ cd yay
 			arch-chroot /mnt/ sudo -u $USERNAME makepkg -si --noconfirm
@@ -608,6 +568,8 @@ function_kernel_linux_hardened() {
 			## Install Compositor /  Window System
 			arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/systemLists/waylandPkgs.txt
 			arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/systemLists/x11Pkgs.txt
+			arch-chroot /mnt/ localectl set-x11-keymap "$CHOSEN_SYSTEM_KEYBOARD_LAYOUT"
+
 
 			## Install System Packages
 			arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/systemLists/systemPkgs.txt
@@ -628,8 +590,6 @@ function_kernel_linux_hardened() {
 					#arch-chroot /mnt/ systemctl enable disable-c6.service
 			fi
 			
-			arch-chroot /mnt/ mkinitcpio -p $
-
 			## Install Userspace
 			for i in ${CHOSEN_USERSPACE[@]}
 			do
@@ -682,7 +642,7 @@ function_kernel_linux_hardened() {
 					echo "Set LightDM as Login-Manager..."
 					arch-chroot /mnt/ systemctl enable gdm
 				elif [ $CHOSEN_LOGINMANAGER == "LightDM" ]; then
-					echo "Set LightDM as Login-Manager..."ryzen 5625 u
+					echo "Set LightDM as Login-Manager..."
 					arch-chroot /mnt/ systemctl enable lightdm
 			fi
 
@@ -820,21 +780,16 @@ function_kernel_linux_hardened() {
 			
 
 			#systemctl enable snapd
-			systemctl enable bluetooth
+			#systemctl enable bluetooth
 
 
 			## Setup Firewalld as system wide firewall
 			
-
-			## Generate mkinitcpio.conf
-			
-
-
-			arch-chroot /mnt/ mkinitcpio -p $
-
 			## Change sudo for user(s) to normal
 			sed -i 's/%wheel ALL=(ALL:ALL) NOPASSWD: ALL/#%wheel ALL=(ALL:ALL) NOPASSWD: ALL/g' /mnt/etc/sudors
 			sed -i 's/#%wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/g' /mnt/etc/sudors
+
+			arch-chroot /mnt/ $MKINIT_KERNEL
 
 			## Reboot system
 			whiptail --title "Installation is complete" --yesno "Restart computer?" 32 128 3>&1 1>&2 2>&3
@@ -861,4 +816,4 @@ function_kernel_linux_hardened() {
 	fi
 }
 
-
+function_start_installation_guide

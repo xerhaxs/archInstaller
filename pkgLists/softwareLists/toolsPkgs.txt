@@ -5,7 +5,6 @@ edex-ui-bin
 electronmail-bin
 ghostwriter
 k3b
-keyboard-center
 kiwix-desktop
 kiwix-tools
 kmymoney

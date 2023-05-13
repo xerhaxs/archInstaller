@@ -7,4 +7,3 @@ portmaster-stub-bin
 session-desktop-bin
 torbrowser-launcher
 xmrig
-xmrig-cuda

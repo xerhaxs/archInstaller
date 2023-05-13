@@ -1,11 +1,8 @@
-godot
 intellij-idea-community-edition
 jdk-openjdk
 nmap
 nodejs
 npm
 pycharm-community-edition
-qtcreator
 rpi-imager-bin
-umbrello
 vscodium-bin
