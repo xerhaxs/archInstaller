@@ -3,4 +3,4 @@ lib32-wayland
 wayland-utils
 wayland-protocols
 egl-wayland
-xorg-wayland
+xorg-xwayland

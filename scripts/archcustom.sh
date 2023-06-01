@@ -537,42 +537,28 @@ function_installation_guide() {
 			arch-chroot /mnt/ pacman -Syyu --noconfirm
 
 			## Enable chaotic-aur
-			arch-chroot /mnt/ pacman-key --recv-key FBA220DFC880C036 --keyserver keyserver.ubuntu.com
-			arch-chroot /mnt/ pacman-key --lsign-key FBA220DFC880C036
-			arch-chroot /mnt/ pacman -U --noconfirm 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-keyring.pkg.tar.zst' 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-mirrorlist.pkg.tar.zst'
-			echo -e "[chaotic-aur] \nInclude = /etc/pacman.d/chaotic-mirrorlist" | tee -a /mnt/etc/pacman.conf
+			#arch-chroot /mnt/ pacman-key --recv-key FBA220DFC880C036 --keyserver keyserver.ubuntu.com
+			#arch-chroot /mnt/ pacman-key --lsign-key FBA220DFC880C036
+			#arch-chroot /mnt/ pacman -U --noconfirm 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-keyring.pkg.tar.zst' 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-mirrorlist.pkg.tar.zst'
+			#echo -e "[chaotic-aur] \nInclude = /etc/pacman.d/chaotic-mirrorlist" | tee -a /mnt/etc/pacman.conf
 
 			## Update mirror lists by speed
 			#cp /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.backup
 
 
-
-
-
-			## Install yay package manager
-			mkdir /mnt/build
-			cd /mnt/build
-			git clone https://aur.archlinux.org/yay.git
-			chown -R nobody /mnt/build
-			cd /mnt/build/yay
-			sudo -u nobody makepkg -s --noconfirm
-			#arch-chroot /mnt/ chown -R $CHROOTUSERNAME /build
-			#arch-chroot /mnt/ cd yay
-			#arch-chroot /mnt/ sudo -u $CHROOTUSERNAME makepkg -si --noconfirm
-			arch-chroot /mnt/ sudo -u $CHROOTUSERNAME pacman -U /build/yay/*.pkg.tar.zst --noconfirm
+			
 	
 			## Install CPU Microcode
-			arch-chroot /mnt/ sudo -u $CHROOTUSERNAME yay -S --needed --noconfirm $CPU_MICROCODE
+			arch-chroot /mnt/ pacman -S --needed --noconfirm $CPU_MICROCODE
 
 			## Install / Set GPU Driver
-			arch-chroot /mnt/ sudo -u $CHROOTUSERNAME yay -S --needed --noconfirm $GPU_DRIVER
+			arch-chroot /mnt/ pacman -S --needed --noconfirm $GPU_DRIVER
 			$MODULES_DRIVER
 
 			## Install Compositor /  Window System
 			arch-chroot /mnt/ sudo -u $CHROOTUSERNAME yay -S --needed --noconfirm - < pkgLists/systemLists/waylandPkgs.txt
 			arch-chroot /mnt/ sudo -u $CHROOTUSERNAME yay -S --needed --noconfirm - < pkgLists/systemLists/x11Pkgs.txt
 			arch-chroot /mnt/ localectl set-x11-keymap "$CHOSEN_SYSTEM_KEYBOARD_LAYOUT"
-
 
 			## Install System Packages
 			arch-chroot /mnt/ sudo -u $CHROOTUSERNAME yay -S --needed --noconfirm - < pkgLists/systemLists/systemPkgs.txt
