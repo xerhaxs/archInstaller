@@ -153,19 +153,18 @@ function_partition_basic() {
 	parted $CHOSEN_DRIVE mklabel gpt
 	parted $CHOSEN_DRIVE mkpart primary fat32 1MiB 513MiB
 	parted $CHOSEN_DRIVE set 1 esp on
-	parted $CHOSEN_DRIVE mkpart primary btrfs 513MiB 100%
+	parted $CHOSEN_DRIVE mkpart primary ext4 513MiB 100%
 
 	BOOT_DRIVE=$CHOSEN_DRIVE"1"
 	SYSTEM_DRIVE=$CHOSEN_DRIVE"2"
 
 	mkfs.fat -F 32 -n UEFI $BOOT_DRIVE
-	mkfs.btrfs -L system -n 32k $SYSTEM_DRIVE
+	mkfs.ext4 -L system -n 32k $SYSTEM_DRIVE
 
 	mount $SYSTEM_DRIVE /mnt
 	mkdir /mnt/boot
 	mount $BOOT_DRIVE /mnt/boot
 }
-
 
 ## Hardened partition layout
 function_partition_hardened() {
@@ -272,7 +271,7 @@ function_select_root_credentials() {
 
 ## Function to set the user credentials
 function_select_user_credentials() {
-	USERNAME=$(whiptail --title "Create User" --inputbox "Chose your username (only lowercase letters, numbers and no spaces or special characters)" 32 128 3>&1 1>&2 2>&3)
+	CHROOTUSERNAME=$(whiptail --title "Create User" --inputbox "Chose your username (only lowercase letters, numbers and no spaces or special characters)" 32 128 3>&1 1>&2 2>&3)
 	USERPASS=$(function_password)
 }
 
@@ -530,7 +529,7 @@ function_installation_guide() {
 			arch-chroot /mnt/ sudo sh -c "echo root:'$ROOTPASS' | chpasswd"
 
 			## Create User with password
-			arch-chroot /mnt/ useradd -m -G users,wheel -s /bin/bash -p $(openssl passwd -1 $USERPASS) $USERNAME
+			arch-chroot /mnt/ useradd -m -G users,wheel -s /bin/bash -p $(openssl passwd -1 $USERPASS) $CHROOTUSERNAME
 
 			## Enable multilib
 			sed -i '/^#\[multilib]/{n;s/^#//}' /mnt/etc/pacman.conf
@@ -554,31 +553,35 @@ function_installation_guide() {
 			mkdir /mnt/build
 			cd /mnt/build
 			git clone https://aur.archlinux.org/yay.git
-			arch-chroot /mnt/ chown -R $USERNAME /build
-			arch-chroot /mnt/ cd yay
-			arch-chroot /mnt/ sudo -u $USERNAME makepkg -si --noconfirm
+			chown -R nobody /mnt/build
+			cd /mnt/build/yay
+			sudo -u nobody makepkg -s --noconfirm
+			#arch-chroot /mnt/ chown -R $CHROOTUSERNAME /build
+			#arch-chroot /mnt/ cd yay
+			#arch-chroot /mnt/ sudo -u $CHROOTUSERNAME makepkg -si --noconfirm
+			arch-chroot /mnt/ sudo -u $CHROOTUSERNAME pacman -U /build/yay/*.pkg.tar.zst --noconfirm
 	
 			## Install CPU Microcode
-			arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm $CPU_MICROCODE
+			arch-chroot /mnt/ sudo -u $CHROOTUSERNAME yay -S --needed --noconfirm $CPU_MICROCODE
 
 			## Install / Set GPU Driver
-			arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm $GPU_DRIVER
+			arch-chroot /mnt/ sudo -u $CHROOTUSERNAME yay -S --needed --noconfirm $GPU_DRIVER
 			$MODULES_DRIVER
 
 			## Install Compositor /  Window System
-			arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/systemLists/waylandPkgs.txt
-			arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/systemLists/x11Pkgs.txt
+			arch-chroot /mnt/ sudo -u $CHROOTUSERNAME yay -S --needed --noconfirm - < pkgLists/systemLists/waylandPkgs.txt
+			arch-chroot /mnt/ sudo -u $CHROOTUSERNAME yay -S --needed --noconfirm - < pkgLists/systemLists/x11Pkgs.txt
 			arch-chroot /mnt/ localectl set-x11-keymap "$CHOSEN_SYSTEM_KEYBOARD_LAYOUT"
 
 
 			## Install System Packages
-			arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/systemLists/systemPkgs.txt
+			arch-chroot /mnt/ sudo -u $CHROOTUSERNAME yay -S --needed --noconfirm - < pkgLists/systemLists/systemPkgs.txt
 			arch-chroot /mnt/ systemctl enable firewalld
 			arch-chroot /mnt/ systemctl enable watchdog
 
 			## Install Battery & Tocuh optimizations for portable devices
 			if [ $BATTERY_OPTIMIZATION == true ]; then
-					arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/driverLists/laptopPkgs.txt
+					arch-chroot /mnt/ sudo -u $CHROOTUSERNAME yay -S --needed --noconfirm - < pkgLists/driverLists/laptopPkgs.txt
 					arch-chroot /mnt/ systemctl enable cpupower
 					arch-chroot /mnt/ systemctl enable tlp
 					# Librewolf enable touch support
@@ -586,7 +589,7 @@ function_installation_guide() {
 					#c6-Suspendbugfix (For some AMD-Systems)
 					#arch-chroot /mnt/ modprobe msr
 					#arch-chroot /mnt/ sh -c "echo msr > /etc/modules-load.d/msr.conf"
-					#arch-chroot /mnt/ sudo -u $USERNAME yay -S disable-c6-systemd
+					#arch-chroot /mnt/ sudo -u $CHROOTUSERNAME yay -S disable-c6-systemd
 					#arch-chroot /mnt/ systemctl enable disable-c6.service
 			fi
 			
@@ -596,39 +599,39 @@ function_installation_guide() {
 				case $i in
 					Plasma)
 						echo "Add Plasma to installation query..."
-						arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/desktopLists/plasmaPkgs.txt
+						arch-chroot /mnt/ sudo -u $CHROOTUSERNAME yay -S --needed --noconfirm - < pkgLists/desktopLists/plasmaPkgs.txt
 						arch-chroot 
 						# install vlc dolphin addon + metadata remover dolphin addon
-						#mkdir /home/$USERNAME/.local/share/kservices5/ServiceMenus/
-						#cd /home/$USERNAME/build
+						#mkdir /home/$CHROOTUSERNAME/.local/share/kservices5/ServiceMenus/
+						#cd /home/$CHROOTUSERNAME/build
 						#git clone https://github.com/Merrit/kde-dolphin-remove-metadata.git
 						#cd kde-dolphin-remove-metadata
-						#cp -r removeMetadata.desktop /home/$USERNAME/.local/share/kservices5/ServiceMenus/
-						#cd /home/$USERNAME/build
+						#cp -r removeMetadata.desktop /home/$CHROOTUSERNAME/.local/share/kservices5/ServiceMenus/
+						#cd /home/$CHROOTUSERNAME/build
 						#git clone https://github.com/rc2dev/KDE-ServiceMenus.git
 						#cd KDE-ServiceMenus
-						#cp -r *.desktop /home/$USERNAME/.local/share/kservices5/ServiceMenus/
+						#cp -r *.desktop /home/$CHROOTUSERNAME/.local/share/kservices5/ServiceMenus/
 						#arch-chroot /mnt/ firewall-cmd --permanent --zone=home --add-service=kdeconnect
 					;;
 					Gnome)
 						echo "Add Gnome to installation query..."
-						arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/desktopLists/gnomePkgs.txt
+						arch-chroot /mnt/ sudo -u $CHROOTUSERNAME yay -S --needed --noconfirm - < pkgLists/desktopLists/gnomePkgs.txt
 						arch-chroot /mnt/ firewall-cmd --permanent --zone=home --add-service=kdeconnect
 					;;
 					XFCE)
 						echo "Add XFCE to installation query..."
-						arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/desktopLists/xfcePkgs.txt
+						arch-chroot /mnt/ sudo -u $CHROOTUSERNAME yay -S --needed --noconfirm - < pkgLists/desktopLists/xfcePkgs.txt
 					;;
 					Sway)
 						echo "Add Sway to installation query..."
-						arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/desktopLists/swayPkgs.txt
+						arch-chroot /mnt/ sudo -u $CHROOTUSERNAME yay -S --needed --noconfirm - < pkgLists/desktopLists/swayPkgs.txt
 						if lshw -C display | grep "NVIDIA"; then
-								arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm sway-nvidia
+								arch-chroot /mnt/ sudo -u $CHROOTUSERNAME yay -S --needed --noconfirm sway-nvidia
 						fi
 					;;
 					AwesomeWM)
 						echo "Add Awesome WM to installation query..."
-						arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/desktopLists/awesomePkgs.txt
+						arch-chroot /mnt/ sudo -u $CHROOTUSERNAME yay -S --needed --noconfirm - < pkgLists/desktopLists/awesomePkgs.txt
 					;;
 				esac
 			done
@@ -637,7 +640,7 @@ function_installation_guide() {
 			if [ $CHOSEN_LOGINMANAGER == "SDDM" ]; then
 					echo "Set LightDM as Login-Manager..."
 					arch-chroot /mnt/ systemctl enable sddm
-					arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm sddm-catppuccin-git
+					arch-chroot /mnt/ sudo -u $CHROOTUSERNAME yay -S --needed --noconfirm sddm-catppuccin-git
 				elif [ $CHOSEN_LOGINMANAGER == "GDM" ]; then
 					echo "Set LightDM as Login-Manager..."
 					arch-chroot /mnt/ systemctl enable gdm
@@ -647,33 +650,33 @@ function_installation_guide() {
 			fi
 
 			## Install / Set system theme
-			arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/themeLists/themePkgs.txt
+			arch-chroot /mnt/ sudo -u $CHROOTUSERNAME yay -S --needed --noconfirm - < pkgLists/themeLists/themePkgs.txt
 			if [ $CHOSEN_THEME == "Default" ]; then
 					echo "Set system theme to Default..."
 				elif [ $CHOSEN_THEME == "Catppuccin Latte" ]; then
 					echo "Set system theme to Catppuccin Latte..."
-					arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/themeLists/catppuccinLattePkgs.txt
+					arch-chroot /mnt/ sudo -u $CHROOTUSERNAME yay -S --needed --noconfirm - < pkgLists/themeLists/catppuccinLattePkgs.txt
 					arch-chroot /mnt/ plymouth-set-default-theme -R catppuccin-latte
 					ln -sf ”/usr/share/themes/Catppuccin-Latte-Standard-Mauve-Dark/gtk-4.0/assets” ”/usr/share/gtk-4.0/assets”
 					ln -sf ”/usr/share/themes/Catppuccin-Latte-Standard-Mauve-Dark/gtk-4.0/gtk.css” ”/usr/share/gtk-4.0/gtk.css”
 					ln -sf "/usr/share/themes/Catppuccin-Latte-Standard-Mauve-Dark/gtk-4.0/gtk-dark.css” "/usr/share/gtk-4.0/gtk-dark.css”
 				elif [ $CHOSEN_THEME == "Catppuccin Frappé" ]; then
 					echo "Set system theme to Catppuccin Frappé..."
-					arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/themeLists/catppuccinFrappePkgs.txt
+					arch-chroot /mnt/ sudo -u $CHROOTUSERNAME yay -S --needed --noconfirm - < pkgLists/themeLists/catppuccinFrappePkgs.txt
 					arch-chroot /mnt/ plymouth-set-default-theme -R catppuccin-frappe
 					ln -sf ”/usr/share/themes/Catppuccin-Frappe-Standard-Mauve-Dark/gtk-4.0/assets” ”/usr/share/gtk-4.0/assets”
 					ln -sf ”/usr/share/themes/Catppuccin-Frappe-Standard-Mauve-Dark/gtk-4.0/gtk.css” ”/usr/share/gtk-4.0/gtk.css”
 					ln -sf "/usr/share/themes/Catppuccin-Frappe-Standard-Mauve-Dark/gtk-4.0/gtk-dark.css” "/usr/share/gtk-4.0/gtk-dark.css”
 				elif [ $CHOSEN_THEME == "Catppuccin Macchiato" ]; then
 					echo "Set system theme to Catppuccin Macchiato..."
-					arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/themeLists/catppuccinMacchiatoPkgs.txt
+					arch-chroot /mnt/ sudo -u $CHROOTUSERNAME yay -S --needed --noconfirm - < pkgLists/themeLists/catppuccinMacchiatoPkgs.txt
 					arch-chroot /mnt/ plymouth-set-default-theme -R catppuccin-macchiato
 					ln -sf ”/usr/share/themes/Catppuccin-Macchiato-Standard-Mauve-Dark/gtk-4.0/assets” ”/usr/share/gtk-4.0/assets”
 					ln -sf ”/usr/share/themes/Catppuccin-Macchiato-Standard-Mauve-Dark/gtk-4.0/gtk.css” ”/usr/share/gtk-4.0/gtk.css”
 					ln -sf "/usr/share/themes/Catppuccin-Macchiato-Standard-Mauve-Dark/gtk-4.0/gtk-dark.css” "/usr/share/gtk-4.0/gtk-dark.css”
 				elif [ $CHOSEN_THEME == "Catppuccin Mocha" ]; then
 					echo "Set system theme to Catppuccin Mocha..."
-					arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/themeLists/catppuccinMochaPkgs.txt
+					arch-chroot /mnt/ sudo -u $CHROOTUSERNAME yay -S --needed --noconfirm - < pkgLists/themeLists/catppuccinMochaPkgs.txt
 					arch-chroot /mnt/ plymouth-set-default-theme -R catppuccin-mocha
 					ln -sf ”/usr/share/themes/Catppuccin-Mocha-Standard-Mauve-Dark/gtk-4.0/assets” ”/usr/share/gtk-4.0/assets”
 					ln -sf ”/usr/share/themes/Catppuccin-Mocha-Standard-Mauve-Dark/gtk-4.0/gtk.css” ”/usr/share/gtk-4.0/gtk.css”
@@ -686,39 +689,39 @@ function_installation_guide() {
 				case $i in
 					"Base")
 						echo "Add Base to installation query..."
-						arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/softwareLists/basePkgs.txt
+						arch-chroot /mnt/ sudo -u $CHROOTUSERNAME yay -S --needed --noconfirm - < pkgLists/softwareLists/basePkgs.txt
 					;;
 					"Editing")
 						echo "Add Editing to installation query..."
-						arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/softwareLists/editingPkgs.txt
+						arch-chroot /mnt/ sudo -u $CHROOTUSERNAME yay -S --needed --noconfirm - < pkgLists/softwareLists/editingPkgs.txt
 					;;
 					"Flatpaks")
 						echo "Add Flatpaks to installation query..."
-						arch-chroot /mnt/ sudo -u $USERNAME yay -S flatpak
+						arch-chroot /mnt/ sudo -u $CHROOTUSERNAME yay -S flatpak
 						## Configure theming for Flatpaks
 						arch-chroot /mnt/ sudo flatpak override --filesystem=$HOME/.themes
 						arch-chroot /mnt/ sudo flatpak override --env=GTK_THEME=##theme##
 						## Install Flatpaks
-						arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/softwareLists/flatpakPkgs.txt
+						arch-chroot /mnt/ sudo -u $CHROOTUSERNAME yay -S --needed --noconfirm - < pkgLists/softwareLists/flatpakPkgs.txt
 						## Install custom asar-file for Discord
 						rm /var/lib/flatpak/app/com.discordapp.Discord/current/active/files/discord/resources/app.asar
 						wget -c https://github.com/GooseMod/OpenAsar/releases/download/nightly/app.asar -P /var/lib/flatpak/app/com.discordapp.Discord/current/active/files/discord/resources/
 					;;
 					"Gaming")
 						echo "Add Gaming to installation query..."
-						arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/softwareLists/gamingPkgs.txt
+						arch-chroot /mnt/ sudo -u $CHROOTUSERNAME yay -S --needed --noconfirm - < pkgLists/softwareLists/gamingPkgs.txt
 					;;
 					"Multimedia")
 						echo "Add Multimedia to installation query..."
-						arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/softwareLists/multimediaPkgs.txt
+						arch-chroot /mnt/ sudo -u $CHROOTUSERNAME yay -S --needed --noconfirm - < pkgLists/softwareLists/multimediaPkgs.txt
 					;;
 					"Office")
 						echo "Add Office to installation query..."
-						arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/softwareLists/officePkgs.txt
+						arch-chroot /mnt/ sudo -u $CHROOTUSERNAME yay -S --needed --noconfirm - < pkgLists/softwareLists/officePkgs.txt
 					;;
 					"Printing")
 						echo "Add Printing to installation query..."
-						arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/softwareLists/printPkgs.txt
+						arch-chroot /mnt/ sudo -u $CHROOTUSERNAME yay -S --needed --noconfirm - < pkgLists/softwareLists/printPkgs.txt
 
 						arch-chroot /mnt/ systemctl enable cups
 
@@ -730,12 +733,13 @@ function_installation_guide() {
 					;;
 					"Privacy")
 						echo "Add Privacy to installation query..."
-						arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/softwareLists/privacyPkgs.txt
+						arch-chroot /mnt/ sudo -u $CHROOTUSERNAME yay -S --needed --noconfirm - < pkgLists/softwareLists/privacyPkgs.txt
 						firewalld-cmd --set-default=public
+						systemctl enable portmaster
 					;;
 					"Programming")
 						echo "Add Programming to installation query..."
-						arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/softwareLists/programmingPkgs.txt
+						arch-chroot /mnt/ sudo -u $CHROOTUSERNAME yay -S --needed --noconfirm - < pkgLists/softwareLists/programmingPkgs.txt
 
 						EXTENSION_FILE="vscExt.txt"
 						while IFS= read -r EXTENSION; do
@@ -744,7 +748,7 @@ function_installation_guide() {
 					;;
 					"Server")
 						echo "Add Server to installation query..."
-						arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/softwareLists/serverPkgs.txt
+						arch-chroot /mnt/ sudo -u $CHROOTUSERNAME yay -S --needed --noconfirm - < pkgLists/softwareLists/serverPkgs.txt
 						
 						arch-chroot /mnt/ systemctl enable httpd
 						arch-chroot /mnt/ systemctl enable samba
@@ -761,16 +765,16 @@ function_installation_guide() {
 					;;
 					"Tools")
 						echo "Add Toosl to installation query..."
-						arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/softwareLists/toolsPkgs.txt
+						arch-chroot /mnt/ sudo -u $CHROOTUSERNAME yay -S --needed --noconfirm - < pkgLists/softwareLists/toolsPkgs.txt
 					;;
 					"VM")
 						echo "Add VM to installation query..."
-						arch-chroot /mnt/ sudo -u $USERNAME yay -S --needed --noconfirm - < pkgLists/softwareLists/vmPkgs.txt
+						arch-chroot /mnt/ sudo -u $CHROOTUSERNAME yay -S --needed --noconfirm - < pkgLists/softwareLists/vmPkgs.txt
 
 						sed -i 's/#unix_sock_group = "libvirt"/unix_sock_group = "libvirt"/g' /mnt/etc/libvirt/libvirtd.conf
 						sed -i 's/#unix_sock_rw_perms = "0770"/unix_sock_rw_perms = "0770"/g' /mnt/etc/libvirt/libvirtd.conf
 
-						arch-chroot /mnt/ gpasswd -a $USERNAME libvirt
+						arch-chroot /mnt/ gpasswd -a $CHROOTUSERNAME libvirt
 						arch-chroot /mnt/ systemctl enable libvirtd
 					;;	
 				esac

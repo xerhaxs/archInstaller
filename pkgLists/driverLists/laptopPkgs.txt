@@ -1,4 +1,5 @@
 cpupower
 tlp
+tlp-rdw
 tlpui
 i2c-tools

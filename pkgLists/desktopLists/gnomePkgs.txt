@@ -19,8 +19,6 @@ gnome-shell-extension-clipboard-indicator
 gnome-shell-extension-desktop-icons-ng
 gnome-shell-extension-tray-icons-reloaded
 gnome-shell-extension-dash-to-panel
-gnome-shell-extension-tiling-assistant
-gnome-network-displays
 gedit
 geary
 rnote
