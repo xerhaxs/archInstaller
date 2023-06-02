@@ -6,6 +6,7 @@ flameshot
 geckodriver
 helvum
 hollywood
+jdk-openjdk
 keepassxc
 librewolf-bin
 librewolf-extension-plasma-integration
@@ -22,6 +23,5 @@ syncthing
 syncthingtray
 v4l2loopback-dkms
 ventoy-bin
-watchdog
 wireplumber
 yt-dlp

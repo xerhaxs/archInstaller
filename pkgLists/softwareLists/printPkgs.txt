@@ -2,5 +2,3 @@ avahi
 cups
 gimagereader-gtk
 simple-scan
-skanlite
-skanpage

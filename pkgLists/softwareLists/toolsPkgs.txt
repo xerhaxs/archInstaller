@@ -8,7 +8,6 @@ k3b
 kiwix-desktop
 kiwix-tools
 kmymoney
-open-numismat-bin
 openrgb-bin
 qtqr
 testdisk

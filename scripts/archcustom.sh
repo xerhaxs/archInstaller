@@ -283,6 +283,10 @@ function_select_user_credentials() {
 ### ---- End: Define functions for this installation script ----
 ###
 
+###
+### ---- Start: Configuration of the system ----
+###
+
 
 
 function_startup_message
@@ -330,12 +334,6 @@ function_installation_guide() {
 
 
 
-###
-### ---- Start: Configuration of the system ----
-###
-
-
-
 	## Last confirmation before executing script to install everything
 	whiptail --title "Finish and execute" --yesno "The configuration is complete. Do you want to run and execute your configuration? (This can take up some time.)" 32 128 3>&1 1>&2 2>&3
 
@@ -343,12 +341,12 @@ function_installation_guide() {
 			whiptail --title "Final Information" --msgbox "When the process is done, the computer should reboot automatically. Please do not power off or disconnect your computer from the network during the process." 32 128 3>&1 1>&2 2>&3
 			
 
+
 			###
 			### ---- Start: Executing of the installation ----
 			###
 
 
-			### Execute every command to install the operation system
 
 			### Hardware Configuration
 			## Install core packages
@@ -432,9 +430,6 @@ function_installation_guide() {
 			## Update mirror lists by speed
 			#cp /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.backup
 
-
-			
-	
 			## Install CPU Microcode
 			arch-chroot /mnt/ pacman -S --needed --noconfirm $CPU_MICROCODE
 
@@ -448,7 +443,7 @@ function_installation_guide() {
 			arch-chroot /mnt/ localectl set-x11-keymap "$CHOSEN_SYSTEM_KEYBOARD_LAYOUT"
 
 			arch-chroot /mnt/ systemctl enable firewalld
-			#arch-chroot /mnt/ systemctl enable watchdog
+
 
 			## Setup Firewalld as system wide firewall
 			
@@ -471,9 +466,11 @@ function_installation_guide() {
 			fi
 
 
+
 			###
 			### ---- End: Executing of the installation ----
 			###
+
 
 
 		elif [[ $? -eq 1 ]]; then

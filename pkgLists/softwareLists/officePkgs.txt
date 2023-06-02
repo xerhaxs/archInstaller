@@ -11,4 +11,5 @@ libreoffice-still-de
 libreoffice-extension-languagetool
 mythes-de
 mythes-en
+rnote
 xournalpp
