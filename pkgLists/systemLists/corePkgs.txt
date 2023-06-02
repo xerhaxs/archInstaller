@@ -1,3 +1,6 @@
+acpid
+avahi-daemon
+cups
 btrfs-progs
 dosfstools
 efibootmgr

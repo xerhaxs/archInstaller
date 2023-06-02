@@ -166,6 +166,15 @@ function_partition_basic() {
 	mount $SYSTEM_DRIVE /mnt
 	mkdir /mnt/boot
 	mount $BOOT_DRIVE /mnt/boot
+
+	## Create Swap file
+	dd if=/dev/zero of=/mnt/swapfile bs=1M count=16k status=progress
+	chmod 0600 /mnt/swapfile
+	mkswap -U clear /mnt/swapfile
+	swapon /mnt/swapfile
+
+	# Generate fstab
+	genfstab -Lp /mnt > /mnt/etc/fstab
 }
 
 ## Hardened partition layout
@@ -194,17 +203,26 @@ function_partition_hardened() {
 	## Create Home partition
 	parted $CHOSEN_DRIVE mkpart primary 50% 100%
 	CRYPT_HOME_DRIVE=$CHOSEN_DRIVE"3"
+	cryptsetup -c aes-xts-plain -y -s 512 luksFormat --type luks1 $CRYPT_HOME_DRIVE
+	cryptsetup luksOpen $CRYPT_HOME_DRIVE
+	mkfs.ext4 -L /dev/mapper/crypt-home
+	mkfs.ext4 -L home
 
-	
-	
-	
-
+	# Mount the file system
 	mount $CRYPT_ROOT_DRIVE /mnt/
 	mkdir /mnt/efi/
 	mount $EFI_DRIVE /mnt/efi
+	mkdir /mnt/home
+	mount $CRYPT_HOME_DRIVE /mnt/home
 
+	## Create Swap file
+	dd if=/dev/zero of=/mnt/swapfile bs=1M count=16k status=progress
+	chmod 0600 /mnt/swapfile
+	mkswap -U clear /mnt/swapfile
+	swapon /mnt/swapfile
 	
-	cryptsetup open $CRYPT_DRIVE cryptlvm
+	# Generate fstab
+	genfstab -Lp /mnt > /mnt/etc/fstab
 }
 
 ## Function to set the hostname
@@ -354,30 +372,70 @@ function_installation_guide() {
 					function_partition_basic
 					pacstrap /mnt - < pkgLists/systemLists/linuxPkgs.txt
 					pacstrap /mnt - < pkgLists/systemLists/corePkgs.txt
+
 					MKINIT_KERNEL="mkinitcpio -p linux"
-					grub-install --target=x86_64-efi --efi-directory=esp --bootloader-id=GRUB
+
+					# Update mkinitcpio.conf
+					sed -i '/^HOOKS=/c\HOOKS=(base systemd autodetect modconf kms keyboard keymap plymouth sd-vconsole block filesystems fsck resume shutdown)' 
+
+					MKINIT_KERNEL="mkinitcpio -p linux"
+
+					arch-chroot /mnt/ grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB --recheck --debug
+
+					arch-chroot /mnt/ grub-mkconfig -o /boot/grub/grub.cfg
+
 				elif [ $CHOSEN_SYSTEM_TYPE == "Zen" ]; then
 					function_partition_basic
 					pacstrap /mnt - < pkgLists/systemLists/linux-ltsPkgs.txt
 					pacstrap /mnt - < pkgLists/systemLists/corePkgs.txt
+
 					MKINIT_KERNEL="mkinitcpio -p linux-lts"
-					grub-install --target=x86_64-efi --efi-directory=esp --bootloader-id=GRUB
+					
+					# Update mkinitcpio.conf
+					sed -i '/^HOOKS=/c\HOOKS=(base systemd autodetect modconf kms keyboard keymap plymouth sd-vconsole block filesystems fsck resume shutdown)' 
+
+					MKINIT_KERNEL="mkinitcpio -p linux-lts"
+
+					arch-chroot /mnt/ grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB --recheck --debug
+
+					arch-chroot /mnt/ grub-mkconfig -o /boot/grub/grub.cfg
+
 				elif [ $CHOSEN_SYSTEM_TYPE == "LTS" ]; then
 					function_partition_basic
 					pacstrap /mnt - < pkgLists/systemLists/linux-zenPkgs.txt
 					pacstrap /mnt - < pkgLists/systemLists/corePkgs.txt
+
 					MKINIT_KERNEL="mkinitcpio -p linux-zen"
-					grub-install --target=x86_64-efi --efi-directory=esp --bootloader-id=GRUB
+
+					# Update mkinitcpio.conf
+					sed -i '/^HOOKS=/c\HOOKS=(base systemd autodetect modconf kms keyboard keymap plymouth sd-vconsole block filesystems fsck resume shutdown)' 
+
+					MKINIT_KERNEL="mkinitcpio -p linux-zen"
+
+					arch-chroot /mnt/ grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB --recheck --debug
+
+					arch-chroot /mnt/ grub-mkconfig -o /boot/grub/grub.cfg
+
 				elif [ $CHOSEN_SYSTEM_TYPE == "Hardened" ]; then
 					function_partition_hardened
 					pacstrap /mnt - < pkgLists/systemLists/linux-hardenedPkgs.txt
 					pacstrap /mnt - < pkgLists/systemLists/corePkgs.txt 
+
 					MKINIT_KERNEL="mkinitcpio -p linux-hardened"
-					#grub-install --target=x86_64-efi --efi-directory=esp --bootloader-id=GRUB
+
+					# Update mkinitcpio.conf
+					sed -i '/^HOOKS=/c\HOOKS=(base systemd autodetect modconf kms keyboard keymap plymouth sd-vconsole block sd-encrypt lvm2 filesystems fsck resume shutdown)' 
+
+					MKINIT_KERNEL="mkinitcpio -p linux-hardened"
+
+					arch-chroot /mnt/ grub-install --target=x86_64-efi --efi-directory=/efi --bootloader-id=GRUB --recheck --debug
+
+					arch-chroot /mnt/ grub-mkconfig -o /boot/grub/grub.cfg
+
+					echo "GRUB_ENABLE_CRYPTODISK=y" >> /mnt/etc/default/grub
+
+					arch-chroot /mnt/ grub-mkconfig -o /boot/grub/grub.cfg
 			fi
-			
-			# Generate fstab
-			genfstab -Lp /mnt > /mnt/etc/fstab
 			
 			### System Configuration
 
@@ -442,10 +500,13 @@ function_installation_guide() {
 			arch-chroot /mnt/ pacman -S --needed --noconfirm - < pkgLists/systemLists/x11Pkgs.txt
 			arch-chroot /mnt/ localectl set-x11-keymap "$CHOSEN_SYSTEM_KEYBOARD_LAYOUT"
 
+			## Setup Firewalld as system wide firewall
 			arch-chroot /mnt/ systemctl enable firewalld
 
-
-			## Setup Firewalld as system wide firewall
+			## Enable usefull system daemons
+			arch-chroot /mnt/ systemctl enable acpid
+			arch-chroot /mnt/ systemctl enable avahi-daemon
+			arch-chroot /mnt/ systemctl enable cups.service	
 			
 			## Change sudo for user(s) to normal
 			sed -i 's/%wheel ALL=(ALL:ALL) NOPASSWD: ALL/#%wheel ALL=(ALL:ALL) NOPASSWD: ALL/g' /mnt/etc/sudors
