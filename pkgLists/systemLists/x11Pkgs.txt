@@ -1,5 +1,5 @@
 xorg
 xorg-server
 xorg-xinit
-iio-sensor-proxy 
+iio-sensor-proxy
 fprintd

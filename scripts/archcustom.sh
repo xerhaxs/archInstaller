@@ -161,20 +161,17 @@ function_partition_basic() {
 	SYSTEM_DRIVE=$CHOSEN_DRIVE"2"
 
 	mkfs.fat -F 32 -n UEFI $BOOT_DRIVE
-	mkfs.ext4 -L system -n 32k $SYSTEM_DRIVE
+	mkfs.ext4 -L system $SYSTEM_DRIVE
 
 	mount $SYSTEM_DRIVE /mnt
 	mkdir /mnt/boot
 	mount $BOOT_DRIVE /mnt/boot
 
 	## Create Swap file
-	dd if=/dev/zero of=/mnt/swapfile bs=1M count=16k status=progress
+	dd if=/dev/zero of=/mnt/swapfile bs=1M count=8k status=progress
 	chmod 0600 /mnt/swapfile
-	mkswap -U clear /mnt/swapfile
+	mkswap -L swap -U clear /mnt/swapfile
 	swapon /mnt/swapfile
-
-	# Generate fstab
-	genfstab -Lp /mnt > /mnt/etc/fstab
 }
 
 ## Hardened partition layout
@@ -216,13 +213,10 @@ function_partition_hardened() {
 	mount $CRYPT_HOME_DRIVE /mnt/home
 
 	## Create Swap file
-	dd if=/dev/zero of=/mnt/swapfile bs=1M count=16k status=progress
+	dd if=/dev/zero of=/mnt/swapfile bs=1M count=8k status=progress
 	chmod 0600 /mnt/swapfile
-	mkswap -U clear /mnt/swapfile
+	mkswap -L swap -U clear /mnt/swapfile
 	swapon /mnt/swapfile
-	
-	# Generate fstab
-	genfstab -Lp /mnt > /mnt/etc/fstab
 }
 
 ## Function to set the hostname
@@ -376,9 +370,12 @@ function_installation_guide() {
 					MKINIT_KERNEL="mkinitcpio -p linux"
 
 					# Update mkinitcpio.conf
-					sed -i '/^HOOKS=/c\HOOKS=(base systemd autodetect modconf kms keyboard keymap plymouth sd-vconsole block filesystems fsck resume shutdown)' 
+					sed -i '/^HOOKS=/c\HOOKS=(base systemd autodetect modconf kms keyboard keymap plymouth sd-vconsole block filesystems fsck resume shutdown)' /mnt/etc/mkinitcpio.conf
 
-					MKINIT_KERNEL="mkinitcpio -p linux"
+					arch-chroot /mnt/ $MKINIT_KERNEL
+					
+					# Generate fstab
+					genfstab -Lp /mnt > /mnt/etc/fstab
 
 					arch-chroot /mnt/ grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB --recheck --debug
 
@@ -392,9 +389,12 @@ function_installation_guide() {
 					MKINIT_KERNEL="mkinitcpio -p linux-lts"
 					
 					# Update mkinitcpio.conf
-					sed -i '/^HOOKS=/c\HOOKS=(base systemd autodetect modconf kms keyboard keymap plymouth sd-vconsole block filesystems fsck resume shutdown)' 
+					sed -i '/^HOOKS=/c\HOOKS=(base systemd autodetect modconf kms keyboard keymap plymouth sd-vconsole block filesystems fsck resume shutdown)' /mnt/etc/mkinitcpio.conf
 
-					MKINIT_KERNEL="mkinitcpio -p linux-lts"
+					arch-chroot /mnt/ $MKINIT_KERNEL
+
+					# Generate fstab
+					genfstab -Lp /mnt > /mnt/etc/fstab
 
 					arch-chroot /mnt/ grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB --recheck --debug
 
@@ -408,9 +408,12 @@ function_installation_guide() {
 					MKINIT_KERNEL="mkinitcpio -p linux-zen"
 
 					# Update mkinitcpio.conf
-					sed -i '/^HOOKS=/c\HOOKS=(base systemd autodetect modconf kms keyboard keymap plymouth sd-vconsole block filesystems fsck resume shutdown)' 
+					sed -i '/^HOOKS=/c\HOOKS=(base systemd autodetect modconf kms keyboard keymap plymouth sd-vconsole block filesystems fsck resume shutdown)' /mnt/etc/mkinitcpio.conf
 
-					MKINIT_KERNEL="mkinitcpio -p linux-zen"
+					arch-chroot /mnt/ $MKINIT_KERNEL
+
+					# Generate fstab
+					genfstab -Lp /mnt > /mnt/etc/fstab
 
 					arch-chroot /mnt/ grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB --recheck --debug
 
@@ -424,9 +427,12 @@ function_installation_guide() {
 					MKINIT_KERNEL="mkinitcpio -p linux-hardened"
 
 					# Update mkinitcpio.conf
-					sed -i '/^HOOKS=/c\HOOKS=(base systemd autodetect modconf kms keyboard keymap plymouth sd-vconsole block sd-encrypt lvm2 filesystems fsck resume shutdown)' 
+					sed -i '/^HOOKS=/c\HOOKS=(base systemd autodetect modconf kms keyboard keymap plymouth sd-vconsole block sd-encrypt lvm2 filesystems fsck resume shutdown)' /mnt/etc/mkinitcpio.conf
 
-					MKINIT_KERNEL="mkinitcpio -p linux-hardened"
+					arch-chroot /mnt/ $MKINIT_KERNEL
+
+					# Generate fstab
+					genfstab -Lp /mnt > /mnt/etc/fstab
 
 					arch-chroot /mnt/ grub-install --target=x86_64-efi --efi-directory=/efi --bootloader-id=GRUB --recheck --debug
 
@@ -441,7 +447,7 @@ function_installation_guide() {
 
 			## Enable sudo without password for user(s) during installation
 			arch-chroot /mnt/ EDITOR=vim
-			sed -i 's/#%wheel ALL=(ALL:ALL) NOPASSWD: ALL/%wheel ALL=(ALL:ALL) NOPASSWD: ALL/g' /mnt/etc/sudors
+			sed -i 's/#%wheel ALL=(ALL:ALL) NOPASSWD: ALL/%wheel ALL=(ALL:ALL) NOPASSWD: ALL/g' /mnt/etc/sudoers
 
 			## Set hostname
 			echo $HOSTNAME > /mnt/etc/hostname
@@ -509,22 +515,22 @@ function_installation_guide() {
 			arch-chroot /mnt/ systemctl enable cups.service	
 			
 			## Change sudo for user(s) to normal
-			sed -i 's/%wheel ALL=(ALL:ALL) NOPASSWD: ALL/#%wheel ALL=(ALL:ALL) NOPASSWD: ALL/g' /mnt/etc/sudors
-			sed -i 's/#%wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/g' /mnt/etc/sudors
+			sed -i 's/%wheel ALL=(ALL:ALL) NOPASSWD: ALL/#%wheel ALL=(ALL:ALL) NOPASSWD: ALL/g' /mnt/etc/sudoers
+			sed -i 's/#%wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/g' /mnt/etc/sudoers
 
 			arch-chroot /mnt/ $MKINIT_KERNEL
 
 			## Reboot system
-			whiptail --title "Installation is complete" --yesno "Restart computer?" 32 128 3>&1 1>&2 2>&3
+			#whiptail --title "Installation is complete" --yesno "Restart computer?" 32 128 3>&1 1>&2 2>&3
 
-			if [[ $? -eq 0 ]]; then
-					umount -a
-					systemctl reboot --now
-				elif [[ $? -eq 1 ]]; then
-					whiptail --title "MESSAGE" --msgbox "Cancelling Process since user pressed <NO>. Returned to shell." 32 128 3>&1 1>&2 2>&3
-				elif [[ $? -eq 255 ]]; then
-					whiptail --title "MESSAGE" --msgbox "User pressed ESC. Returned to shell." 32 128 3>&1 1>&2 2>&3
-			fi
+			#if [[ $? -eq 0 ]]; then
+			#		umount -a
+			#		systemctl reboot --now
+			#	elif [[ $? -eq 1 ]]; then
+			#		whiptail --title "MESSAGE" --msgbox "Cancelling Process since user pressed <NO>. Returned to shell." 32 128 3>&1 1>&2 2>&3
+			#	elif [[ $? -eq 255 ]]; then
+			#		whiptail --title "MESSAGE" --msgbox "User pressed ESC. Returned to shell." 32 128 3>&1 1>&2 2>&3
+			#fi
 
 
 
