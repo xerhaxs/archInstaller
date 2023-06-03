@@ -476,7 +476,8 @@ function_installation_guide() {
 
 			## Set keymap
 			arch-chroot /mnt/ localectl set-keymap "$CHOSEN_SYSTEM_KEYBOARD_LAYOUT"
-			sed -i "s/KEYMAP=.*/KEYMAP=$CHOSEN_SYSTEM_KEYBOARD_LAYOUT/" /mnt/etc/vconsole.conf
+			echo "KEYMAP=$CHOSEN_SYSTEM_KEYBOARD_LAYOUT" > /mnt/etc/vconsole.conf
+			
 			# Output the selected keyboard layout
 			echo "The selected keyboard layout is: $(arch-chroot /mnt/ localectl status | grep "VC Keymap" | awk '{print $3}')"
 
