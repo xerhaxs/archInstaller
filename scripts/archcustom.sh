@@ -242,7 +242,7 @@ function_select_timezone() {
 	TIMEZONELIST=$(timedatectl list-timezones)
 	# Show radiolist
 
-	TIMEZONE=$(whiptail --title "Timezone" --radiolist \
+	TIMEZONE=$(whiptail --title "Timezone" --menu \
 	"Choose your timezone:" 32 128 16 \
 	$(for TZ in $TIMEZONELIST; do \
 		echo $TZ \"\" off; \
@@ -269,7 +269,7 @@ function_system_local() {
 	done
 
 	# Generate the whiptail menu and save the results as an array
-	SELECTED_LOCALE=$(whiptail --title "Select Locale" --radiolist "Choose your locale:" 20 78 10 "${OPTIONS[@]}" 3>&1 1>&2 2>&3)
+	SELECTED_LOCALE=$(whiptail --title "Select Locale" --menu "Choose your locale:" 20 78 10 "${OPTIONS[@]}" 3>&1 1>&2 2>&3)
 
 	echo "Locale set to $SELECTED_LOCALE"
 }
@@ -286,7 +286,7 @@ function_system_keyboard_layout() {
 	done
 
 	# Show the Whiptail menu and set the keyboard layout
-	CHOSEN_SYSTEM_KEYBOARD_LAYOUT=$(whiptail --title "Select Keyboard Layout" --radiolist "Chose your keyboard layout:" 32 128 16 "${LAYOUT_MENU_LIST[@]}" 3>&1 1>&2 2>&3)
+	CHOSEN_SYSTEM_KEYBOARD_LAYOUT=$(whiptail --title "Select Keyboard Layout" --menu "Chose your keyboard layout:" 32 128 16 "${LAYOUT_MENU_LIST[@]}" 3>&1 1>&2 2>&3)
 }
 
 ## Function to set the root credentials
