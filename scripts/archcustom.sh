@@ -432,7 +432,8 @@ function_installation_guide() {
 				elif [ $CHOSEN_SYSTEM_TYPE == "Hardened" ]; then
 					function_partition_hardened
 					pacstrap /mnt - < pkgLists/systemLists/linux-hardenedPkgs.txt
-					pacstrap /mnt - < pkgLists/systemLists/corePkgs.txt 
+					pacstrap /mnt - < pkgLists/systemLists/corePkgs.txt
+					#pacstrap /mnt - < pkgLists/systemLists/hardenedPkgs.txt
 
 					MKINIT_KERNEL="mkinitcpio -p linux-hardened"
 
