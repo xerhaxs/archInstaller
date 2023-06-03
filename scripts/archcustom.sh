@@ -188,9 +188,10 @@ function_partition_hardened() {
 	## Create GPT partition type
 	parted $CHOSEN_DRIVE mklabel gpt
 
-	## Create partition
+	## Create Crypt + Boot partition
 	parted $CHOSEN_DRIVE mkpart primary fat32 1MiB 513MiB
 	parted $CHOSEN_DRIVE set 1 esp on
+	parted $CHOSEN_DRIVE --script mkpart primary ext4 513MiB 100%
 	EFI_DRIVE=$CHOSEN_DRIVE"1"
 	CRYPT_DRIVE=$CHOSEN_DRIVE"2"
 
@@ -447,9 +448,11 @@ function_installation_guide() {
 
 					arch-chroot /mnt/ grub-install --target=x86_64-efi --efi-directory=/efi --bootloader-id=GRUB --recheck --debug
 
-					arch-chroot /mnt/ grub-mkconfig -o /boot/grub/grub.cfg
+					sed -i 's/#GRUB_ENABLE_CRYPTODISK=y/GRUB_ENABLE_CRYPTODISK=y/g' /mnt/etc/default/grub
 
-					echo "GRUB_ENABLE_CRYPTODISK=y" >> /mnt/etc/default/grub
+					sed -i 's/#GRUB_DISABLE_OS_PROBER=false/GRUB_DISABLE_OS_PROBER=false/g' /mnt/etc/default/grub
+
+					sed -i 's/GRUB_DISABLE_RECOVERY=true/GRUB_DISABLE_RECOVERY=false/g' /mnt/etc/default/grub
 
 					arch-chroot /mnt/ grub-mkconfig -o /boot/grub/grub.cfg
 			fi
@@ -468,7 +471,8 @@ function_installation_guide() {
 			sed -i "/^$SELECTED_LOCALE/s/^#//" "$MNT_LOCALE_FILE"
 
 			## Set language
-			echo "LANG=$SELECTED_LOCALE" > /mnt/etc/locale.conf	
+			echo "LANG=$SELECTED_LOCALE" > /mnt/etc/locale.conf
+			sed -i 's/#//g' /mnt/etc/locale.conf
 
 			## Set keymap
 			arch-chroot /mnt/ localectl set-keymap "$CHOSEN_SYSTEM_KEYBOARD_LAYOUT"
@@ -529,7 +533,9 @@ function_installation_guide() {
 			sed -i 's/%wheel ALL=(ALL:ALL) NOPASSWD: ALL/#%wheel ALL=(ALL:ALL) NOPASSWD: ALL/g' /mnt/etc/sudoers
 			sed -i 's/#%wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/g' /mnt/etc/sudoers
 
-			arch-chroot /mnt/ $MKINIT_KERNEL
+			arch-chroot /mnt/ grub-mkconfig -o /boot/grub/grub.cfg
+
+			arch-chroot /mnt $MKINIT_KERNEL
 
 			## Reboot system
 			#whiptail --title "Installation is complete" --yesno "Restart computer?" 32 128 3>&1 1>&2 2>&3
