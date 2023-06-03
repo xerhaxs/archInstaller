@@ -152,17 +152,23 @@ function_select_installation_disk() {
 
 ## Standard partition layout
 function_partition_basic() {
+	## Create GPT partition type
 	parted $CHOSEN_DRIVE mklabel gpt
+
+	## Create partition
 	parted $CHOSEN_DRIVE mkpart primary fat32 1MiB 513MiB
 	parted $CHOSEN_DRIVE set 1 esp on
 	parted $CHOSEN_DRIVE mkpart primary ext4 513MiB 100%
 
+	# Init boot + system drive
 	BOOT_DRIVE=$CHOSEN_DRIVE"1"
 	SYSTEM_DRIVE=$CHOSEN_DRIVE"2"
 
+	# Create file system
 	mkfs.fat -F 32 -n UEFI $BOOT_DRIVE
 	mkfs.ext4 -L system $SYSTEM_DRIVE
 
+	# Mount the file system
 	mount $SYSTEM_DRIVE /mnt
 	mkdir /mnt/boot
 	mount $BOOT_DRIVE /mnt/boot
@@ -176,34 +182,38 @@ function_partition_basic() {
 
 ## Hardened partition layout
 function_partition_hardened() {
-	
-
 	## Load encryptin tools
 	modprobe dm-crypt
 	
 	## Create GPT partition type
 	parted $CHOSEN_DRIVE mklabel gpt
 
-	## Create EFI partition
+	## Create partition
 	parted $CHOSEN_DRIVE mkpart primary fat32 1MiB 513MiB
 	parted $CHOSEN_DRIVE set 1 esp on
 	EFI_DRIVE=$CHOSEN_DRIVE"1"
+	CRYPT_DRIVE=$CHOSEN_DRIVE"2"
 
-	## Create Root + Boot partition
-	parted $CHOSEN_DRIVE --script mkpart primary ext4 513MiB 50%
-	CRYPT_ROOT_DRIVE=$CHOSEN_DRIVE"2"
-	cryptsetup -c aes-xts-plain -y -s 512 luksFormat --type luks1 $CRYPT_ROOT_DRIVE
-	cryptsetup luksOpen $CRYPT_ROOT_DRIVE
-	mkfs.ext4 -L /dev/mapper/crypt-root
-	mkfs.ext4 -L root 
+	# Encrypt second partition
+	cryptsetup -c aes-xts-plain -y -s 512 luksFormat --type luks1 $CRYPT_DRIVE
 
-	## Create Home partition
-	parted $CHOSEN_DRIVE mkpart primary 50% 100%
-	CRYPT_HOME_DRIVE=$CHOSEN_DRIVE"3"
-	cryptsetup -c aes-xts-plain -y -s 512 luksFormat --type luks1 $CRYPT_HOME_DRIVE
-	cryptsetup luksOpen $CRYPT_HOME_DRIVE
-	mkfs.ext4 -L /dev/mapper/crypt-home
-	mkfs.ext4 -L home
+	# Open encrypted partition
+	cryptsetup luksOpen $CRYPT_DRIVE lvm
+
+	# Create root + home volume
+	pvcreate /dev/mapper/lvm
+	vgcreate crypt /dev/mapper/lvm
+	lvcreate -l 50%FREE -n root crypt
+	lvcreate -l 100%FREE -n home crypt
+
+	# Init crypt root and crypt home
+	CRYPT_ROOT_DRIVE="/dev/mapper/crypt-root"
+	CRYPT_HOME_DRIVE="/dev/mapper/crypt-home"
+
+	# Create file system
+	mkfs.fat -F 32 -n UEFI $EFI_DRIVE
+	mkfs.ext4 -L root $CRYPT_HOME_DRIVE
+	mkfs.ext4 -L home $CRYPT_ROOT_DRIVE
 
 	# Mount the file system
 	mount $CRYPT_ROOT_DRIVE /mnt/
