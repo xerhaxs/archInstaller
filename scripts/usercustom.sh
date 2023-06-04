@@ -201,6 +201,7 @@ function_installation_guide () {
             git clone https://aur.archlinux.org/yay.git
             cd ~/build/yay
             makepkg -si --noconfirm
+			cd
 
             ## Install System Packages
             yay -S --needed --noconfirm - < pkgLists/systemLists/systemPkgs.txt
@@ -236,7 +237,7 @@ function_installation_guide () {
 						#git clone https://github.com/rc2dev/KDE-ServiceMenus.git
 						#cd KDE-ServiceMenus
 						#cp -r *.desktop /home/$USERNAME/.local/share/kservices5/ServiceMenus/
-						#arch-chroot / firewall-cmd --permanent --zone=home --add-service=kdeconnect
+						sudo firewall-cmd --permanent --zone=home --add-service=kdeconnect
 					;;
 					Gnome)
 						echo "Add Gnome to installation query..."
@@ -407,18 +408,17 @@ function_installation_guide () {
 
 			## Enable system services
 			#systemctl enable snapd
-			sudo systemctl enable bluetooth
 
 			## Reboot system
-			whiptail --title "Installation is complete" --yesno "Restart computer?" 32 128 3>&1 1>&2 2>&3
+			#whiptail --title "Installation is complete" --yesno "Restart computer?" 32 128 3>&1 1>&2 2>&3
 
-			if [[ $? -eq 0 ]]; then
-					sudo systemctl reboot --now
-				elif [[ $? -eq 1 ]]; then
-					whiptail --title "MESSAGE" --msgbox "Cancelling Process since user pressed <NO>. Returned to shell." 32 128 3>&1 1>&2 2>&3
-				elif [[ $? -eq 255 ]]; then
-					whiptail --title "MESSAGE" --msgbox "User pressed ESC. Returned to shell." 32 128 3>&1 1>&2 2>&3
-			fi
+			#if [[ $? -eq 0 ]]; then
+			#		sudo systemctl reboot --now
+			#	elif [[ $? -eq 1 ]]; then
+			#		whiptail --title "MESSAGE" --msgbox "Cancelling Process since user pressed <NO>. Returned to shell." 32 128 3>&1 1>&2 2>&3
+			#	elif [[ $? -eq 255 ]]; then
+			#		whiptail --title "MESSAGE" --msgbox "User pressed ESC. Returned to shell." 32 128 3>&1 1>&2 2>&3
+			#fi
 
 
 

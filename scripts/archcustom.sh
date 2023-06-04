@@ -103,7 +103,7 @@ function_detect_gpu() {
 	if lshw -C display | grep "AMD"; then
 			echo "Add AMD-driver to installation query, because AMD GPU has been found..."
 			GPU_DRIVER="pkgLists/driverLists/amdGpuPkgs.txt"
-			MODULES_DRIVER="sed -i 's/MODULES=(ext4)/MODULES=(ext4 amdgpu)/g' /etc/mkinitcpio.conf"
+			MODULES_DRIVER="sed -i 's/MODULES=(ext4 btusb)/MODULES=(ext4 btusb amdgpu)/g' /etc/mkinitcpio.conf"
 
 		elif lshw -C display | grep "NVIDIA"; then
 				CHOSEN_NVIDIA_DRIVER=$(whiptail --title "Nvidia driver selection" --menu "Do you want to use proprietary or open-source drivers for your Nvidia card?" 32 128 2 \
@@ -115,14 +115,14 @@ function_detect_gpu() {
 			if [ $CHOSEN_NVIDIA_DRIVER == "Proprietary" ]; then
 					echo "Add proprietary nvidia driver to installation query..."
 					GPU_DRIVER="pkgLists/driverLists/nvidiaClosedGpuPkgs.txt"
-					MODULES_DRIVER="sed -i 's/MODULES=(ext4)/MODULES=(ext4 nvidia nvidia_modeset nvidia_uvm nvidia_drm)/g' /etc/mkinitcpio.conf"
+					MODULES_DRIVER="sed -i 's/MODULES=(ext4 btusb)/MODULES=(ext4 btusb nvidia nvidia_modeset nvidia_uvm nvidia_drm)/g' /etc/mkinitcpio.conf"
 				else
 					echo "Add open-source nvidia driver to installation query..."
 					GPU_DRIVER="pkgLists/driverLists/nvidiaOpenGpuPkgs.txt"
-					MODULES_DRIVER="sed -i 's/MODULES=(ext4)/MODULES=(ext4 nouveau)/g' /etc/mkinitcpio.conf"
+					MODULES_DRIVER="sed -i 's/MODULES=(ext4 btusb)/MODULES=(ext4 btusb nouveau)/g' /etc/mkinitcpio.conf"
 			fi
 # add support for qemu hardware
-#MODULES_DRIVER="sed -i 's/MODULES=(ext4)/MODULES=(ext4 qxl bochs_drm virtio-gpu virtio virtio_scsi virtio_blk virtio_pci virtio_net virtio_ring)/g' /etc/mkinitcpio.conf"
+#MODULES_DRIVER="sed -i 's/MODULES=(ext4 btusb)/MODULES=(ext4 btusb qxl bochs_drm virtio-gpu virtio virtio_scsi virtio_blk virtio_pci virtio_net virtio_ring)/g' /etc/mkinitcpio.conf"
 		else
 			whiptail --title "Hardware Configuration" --msgbox "Unknown GPU detected. Continue installation without GPU-Drivers" 32 128 3>&1 1>&2 2>&3
 	fi
@@ -160,7 +160,7 @@ function_partition_basic() {
 	## Create partition
 	parted $CHOSEN_DRIVE mkpart primary fat32 1MiB 513MiB
 	parted $CHOSEN_DRIVE set 1 esp on
-	parted $CHOSEN_DRIVE mkpart primary ext4 513MiB 100%
+	parted $CHOSEN_DRIVE mkpart primary ext4 btusb 513MiB 100%
 
 	# Init boot + system drive
 	BOOT_DRIVE=$CHOSEN_DRIVE"1"
@@ -168,7 +168,7 @@ function_partition_basic() {
 
 	# Create file system
 	mkfs.fat -F 32 -n UEFI $BOOT_DRIVE
-	mkfs.ext4 -L system $SYSTEM_DRIVE
+	mkfs.ext4 btusb -L system $SYSTEM_DRIVE
 
 	# Mount the file system
 	mount $SYSTEM_DRIVE /mnt
@@ -193,7 +193,7 @@ function_partition_hardened() {
 	## Create Crypt + Boot partition
 	parted $CHOSEN_DRIVE mkpart primary fat32 1MiB 513MiB
 	parted $CHOSEN_DRIVE set 1 esp on
-	parted $CHOSEN_DRIVE --script mkpart primary ext4 513MiB 100%
+	parted $CHOSEN_DRIVE --script mkpart primary ext4 btusb 513MiB 100%
 	EFI_DRIVE=$CHOSEN_DRIVE"1"
 	CRYPT_DRIVE=$CHOSEN_DRIVE"2"
 
@@ -216,8 +216,8 @@ function_partition_hardened() {
 
 	# Create file system
 	mkfs.fat -F 32 -n UEFI $EFI_DRIVE
-	mkfs.ext4 -L root $CRYPT_ROOT_DRIVE
-	mkfs.ext4 -L home $CRYPT_HOME_DRIVE
+	mkfs.ext4 btusb -L root $CRYPT_ROOT_DRIVE
+	mkfs.ext4 btusb -L home $CRYPT_HOME_DRIVE
 
 	# Mount the file system
 	mount $CRYPT_ROOT_DRIVE /mnt/
@@ -384,7 +384,7 @@ function_installation_guide() {
 					KERNEL="linux"
 					
 					# Update mkinitcpio.conf
-					sed -i 's/MODULES=()/MODULES=(ext4)/g' /mnt/etc/mkinitcpio.conf
+					sed -i 's/MODULES=()/MODULES=(ext4 btusb)/g' /mnt/etc/mkinitcpio.conf
 					sed -i '/^HOOKS=/c\HOOKS=(base systemd autodetect modconf kms keyboard keymap plymouth sd-vconsole block filesystems fsck resume shutdown)' /mnt/etc/mkinitcpio.conf
 
 					arch-chroot /mnt/ mkinitcpio -p $KERNEL
@@ -404,7 +404,7 @@ function_installation_guide() {
 					KERNEL="linux-lts"
 					
 					# Update mkinitcpio.conf
-					sed -i 's/MODULES=()/MODULES=(ext4)/g' /mnt/etc/mkinitcpio.conf
+					sed -i 's/MODULES=()/MODULES=(ext4 btusb)/g' /mnt/etc/mkinitcpio.conf
 					sed -i '/^HOOKS=/c\HOOKS=(base systemd autodetect modconf kms keyboard keymap plymouth sd-vconsole block filesystems fsck resume shutdown)' /mnt/etc/mkinitcpio.conf
 
 					arch-chroot /mnt/ mkinitcpio -p $KERNEL
@@ -424,7 +424,7 @@ function_installation_guide() {
 					KERNEL="linux-zen"
 
 					# Update mkinitcpio.conf
-					sed -i 's/MODULES=()/MODULES=(ext4)/g' /mnt/etc/mkinitcpio.conf
+					sed -i 's/MODULES=()/MODULES=(ext4 btusb)/g' /mnt/etc/mkinitcpio.conf
 					sed -i '/^HOOKS=/c\HOOKS=(base systemd autodetect modconf kms keyboard keymap plymouth sd-vconsole block filesystems fsck resume shutdown)' /mnt/etc/mkinitcpio.conf
 
 					arch-chroot /mnt/ mkinitcpio -p $KERNEL
@@ -445,7 +445,7 @@ function_installation_guide() {
 					KERNEL="linux-hardened"
 
 					# Update mkinitcpio.conf
-					sed -i 's/MODULES=()/MODULES=(ext4)/g' /mnt/etc/mkinitcpio.conf
+					sed -i 's/MODULES=()/MODULES=(ext4 btusb)/g' /mnt/etc/mkinitcpio.conf
 					sed -i '/^HOOKS=/c\HOOKS=(base systemd autodetect modconf kms keyboard keymap plymouth sd-vconsole block sd-encrypt lvm2 filesystems fsck resume shutdown)' /mnt/etc/mkinitcpio.conf
 
 					arch-chroot /mnt/ mkinitcpio -p $KERNEL
@@ -542,7 +542,9 @@ function_installation_guide() {
 			## Enable usefull system daemons
 			arch-chroot /mnt/ systemctl enable acpid
 			arch-chroot /mnt/ systemctl enable avahi-daemon
+			arch-chroot /mnt/ systemctl enable bluetooth
 			arch-chroot /mnt/ systemctl enable cups.service	
+			arch-chroot /mnt/ systemctl enable NetworkManager
 			
 			## Change sudo for user(s) to normal
 			sed -i 's/%wheel ALL=(ALL:ALL) NOPASSWD: ALL/#%wheel ALL=(ALL:ALL) NOPASSWD: ALL/g' /mnt/etc/sudoers
