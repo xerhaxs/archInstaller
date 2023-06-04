@@ -58,7 +58,7 @@ function_kbd_load() {
 		KBD_OPTIONS+=("$KBD_LINE" "")
 	done < <(localectl list-keymaps)
 
-	CHOSEN_KBD_LAYOUT=$(whiptail --title "Keyboard Layout" --menu "Pick your keyboard layout (This keyboard layout will only be used during the installation process.)" 32 128 16 "${KBD_OPTIONS[@]}" 3>&1 1>&2 2>&3)
+	CHOSEN_KBD_LAYOUT=$(whiptail --title "Keyboard Layout" --menu "Pick your keyboard layout (This keyboard layout will be used during the installation process and on the new system)." 32 128 16 "${KBD_OPTIONS[@]}" 3>&1 1>&2 2>&3)
 	loadkeys $CHOSEN_KBD_LAYOUT
 }
 
@@ -242,14 +242,13 @@ function_select_hostname() {
 ## Function to set the Timzone for the installation system
 function_select_timezone() {
 	# Get list of timezones
-	TIMEZONELIST=$(timedatectl list-timezones)
-	# Show radiolist
+    TIMEZONELIST=$(timedatectl list-timezones)
 
-	TIMEZONE=$(whiptail --title "Timezone" --radiolist \
-	"Choose your timezone:" 32 128 16 \
-	$(for TZ in $TIMEZONELIST; do \
-		echo $TZ \"\" off; \
-	done) 3>&1 1>&2 2>&3)
+    # Show menulist
+    TIMEZONE=$(whiptail --title "Timezone" --menu "Choose your timezone:" 32 128 16 \
+    $(for TZ in $TIMEZONELIST; do \
+        echo $TZ \"\"; \
+    done) 3>&1 1>&2 2>&3)
 }
 
 ## Function to set the locales
@@ -275,21 +274,6 @@ function_system_local() {
 	SELECTED_LOCALE=$(whiptail --title "Select Locale" --radiolist "Choose your locale:" 20 78 10 "${OPTIONS[@]}" 3>&1 1>&2 2>&3)
 
 	echo "Locale set to $SELECTED_LOCALE"
-}
-
-## Function to set the system keyboard layout
-function_system_keyboard_layout() {
-	# Set the variables
-	LAYOUT_LANG_LIST=( $(localectl list-keymaps | sort) )
-	LAYOUT_MENU_LIST=()
-
-	# Iterate through the list of available language and create the menu
-	for LAYOUT_LANG in "${LAYOUT_LANG_LIST[@]}"; do
-		LAYOUT_MENU_LIST+=("$LAYOUT_LANG" "" off)
-	done
-
-	# Show the Whiptail menu and set the keyboard layout
-	CHOSEN_SYSTEM_KEYBOARD_LAYOUT=$(whiptail --title "Select Keyboard Layout" --radiolist "Chose your keyboard layout:" 32 128 16 "${LAYOUT_MENU_LIST[@]}" 3>&1 1>&2 2>&3)
 }
 
 ## Function to set the root credentials
@@ -343,9 +327,6 @@ function_installation_guide() {
 
 	## Locals
 	function_system_local
-
-	## Keyboard Layout
-	function_system_keyboard_layout
 
 	### User Configuration
 
@@ -489,8 +470,8 @@ function_installation_guide() {
 			sed -i -e 's/ .*//' /mnt/etc/locale.conf
 
 			## Set keymap
-			arch-chroot /mnt/ localectl set-keymap "$CHOSEN_SYSTEM_KEYBOARD_LAYOUT"
-			echo "KEYMAP=$CHOSEN_SYSTEM_KEYBOARD_LAYOUT" > /mnt/etc/vconsole.conf
+			arch-chroot /mnt/ localectl set-keymap "$CHOSEN_KBD_LAYOUT"
+			echo "KEYMAP=$CHOSEN_KBD_LAYOUT" > /mnt/etc/vconsole.conf
 			
 			# Output the selected keyboard layout
 			echo "The selected keyboard layout is: $(arch-chroot /mnt/ localectl status | grep "VC Keymap" | awk '{print $3}')"
@@ -534,7 +515,7 @@ function_installation_guide() {
 			## Install Compositor /  Window System
 			arch-chroot /mnt/ pacman -S --needed --noconfirm - < pkgLists/systemLists/waylandPkgs.txt
 			arch-chroot /mnt/ pacman -S --needed --noconfirm - < pkgLists/systemLists/x11Pkgs.txt
-			arch-chroot /mnt/ localectl set-x11-keymap "$CHOSEN_SYSTEM_KEYBOARD_LAYOUT"
+			arch-chroot /mnt/ localectl set-x11-keymap "$CHOSEN_KBD_LAYOUT"
 
 			## Setup Firewalld as system wide firewall
 			arch-chroot /mnt/ systemctl enable firewalld
@@ -558,6 +539,8 @@ function_installation_guide() {
 			cp -R archcustom.sh /mnt/usr/local/bin
 			cp -R usercustom.sh /mnt/usr/local/bin
 			cp -R pkgs/ /mnt/usr/local/bin
+			chmod +x /mnt/usr/local/bin/archcustom.sh
+			chmod +x /mnt/usr/local/bin/usercustom.sh
 
 			## Reboot system
 			whiptail --title "Installation is complete" --yesno "Restart computer?" 32 128 3>&1 1>&2 2>&3
