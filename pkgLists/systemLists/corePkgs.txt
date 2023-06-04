@@ -1,6 +1,8 @@
 acpid
 avahi
 btrfs-progs
+bluez
+bluez-utils
 cups
 dhcp
 dosfstools

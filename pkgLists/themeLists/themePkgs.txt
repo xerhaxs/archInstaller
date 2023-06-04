@@ -1,2 +1,1 @@
 papirus-icon-theme
-lightly-git
