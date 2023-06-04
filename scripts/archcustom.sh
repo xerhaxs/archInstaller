@@ -160,7 +160,7 @@ function_partition_basic() {
 	## Create partition
 	parted $CHOSEN_DRIVE mkpart primary fat32 1MiB 513MiB
 	parted $CHOSEN_DRIVE set 1 esp on
-	parted $CHOSEN_DRIVE mkpart primary ext4 btusb 513MiB 100%
+	parted $CHOSEN_DRIVE mkpart primary ext4 513MiB 100%
 
 	# Init boot + system drive
 	BOOT_DRIVE=$CHOSEN_DRIVE"1"
@@ -168,7 +168,7 @@ function_partition_basic() {
 
 	# Create file system
 	mkfs.fat -F 32 -n UEFI $BOOT_DRIVE
-	mkfs.ext4 btusb -L system $SYSTEM_DRIVE
+	mkfs.ext4 -L system $SYSTEM_DRIVE
 
 	# Mount the file system
 	mount $SYSTEM_DRIVE /mnt
@@ -193,7 +193,7 @@ function_partition_hardened() {
 	## Create Crypt + Boot partition
 	parted $CHOSEN_DRIVE mkpart primary fat32 1MiB 513MiB
 	parted $CHOSEN_DRIVE set 1 esp on
-	parted $CHOSEN_DRIVE --script mkpart primary ext4 btusb 513MiB 100%
+	parted $CHOSEN_DRIVE --script mkpart primary ext4 513MiB 100%
 	EFI_DRIVE=$CHOSEN_DRIVE"1"
 	CRYPT_DRIVE=$CHOSEN_DRIVE"2"
 
@@ -216,8 +216,8 @@ function_partition_hardened() {
 
 	# Create file system
 	mkfs.fat -F 32 -n UEFI $EFI_DRIVE
-	mkfs.ext4 btusb -L root $CRYPT_ROOT_DRIVE
-	mkfs.ext4 btusb -L home $CRYPT_HOME_DRIVE
+	mkfs.ext4 -L root $CRYPT_ROOT_DRIVE
+	mkfs.ext4 -L home $CRYPT_HOME_DRIVE
 
 	# Mount the file system
 	mount $CRYPT_ROOT_DRIVE /mnt/
@@ -553,6 +553,11 @@ function_installation_guide() {
 			arch-chroot /mnt/ grub-mkconfig -o /boot/grub/grub.cfg
 
 			arch-chroot /mnt/ mkinitcpio -p $KERNEL
+
+			## Copy archcustom.sh + usercustom.sh to new installation
+			cp -R archcustom.sh /mnt/usr/local/bin
+			cp -R usercustom.sh /mnt/usr/local/bin
+			cp -R pkgs/ /mnt/usr/local/bin
 
 			## Reboot system
 			whiptail --title "Installation is complete" --yesno "Restart computer?" 32 128 3>&1 1>&2 2>&3

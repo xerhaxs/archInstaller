@@ -1,3 +1,0 @@
-- locale.conf fix (remove second UTF8)
-- radiolists to menulists
-- add secureboot support
