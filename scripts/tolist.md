@@ -1,3 +1,3 @@
-- vconsole.conf fix (remove second UTF8)
+- locale.conf fix (remove second UTF8)
 - radiolists to menulists
 - add secureboot support

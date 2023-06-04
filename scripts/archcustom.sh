@@ -104,6 +104,7 @@ function_detect_gpu() {
 			echo "Add AMD-driver to installation query, because AMD GPU has been found..."
 			GPU_DRIVER="pkgLists/driverLists/amdGpuPkgs.txt"
 			MODULES_DRIVER="sed -i 's/MODULES=(ext4)/MODULES=(ext4 amdgpu)/g' /etc/mkinitcpio.conf"
+
 		elif lshw -C display | grep "NVIDIA"; then
 				CHOSEN_NVIDIA_DRIVER=$(whiptail --title "Nvidia driver selection" --menu "Do you want to use proprietary or open-source drivers for your Nvidia card?" 32 128 2 \
 				"Proprietary" "Much better performance" \
@@ -120,7 +121,8 @@ function_detect_gpu() {
 					GPU_DRIVER="pkgLists/driverLists/nvidiaOpenGpuPkgs.txt"
 					MODULES_DRIVER="sed -i 's/MODULES=(ext4)/MODULES=(ext4 nouveau)/g' /etc/mkinitcpio.conf"
 			fi
-
+# add support for qemu hardware
+#MODULES_DRIVER="sed -i 's/MODULES=(ext4)/MODULES=(ext4 qxl bochs_drm virtio-gpu virtio virtio_scsi virtio_blk virtio_pci virtio_net virtio_ring)/g' /etc/mkinitcpio.conf"
 		else
 			whiptail --title "Hardware Configuration" --msgbox "Unknown GPU detected. Continue installation without GPU-Drivers" 32 128 3>&1 1>&2 2>&3
 	fi
@@ -379,13 +381,13 @@ function_installation_guide() {
 					pacstrap /mnt - < pkgLists/systemLists/linuxPkgs.txt
 					pacstrap /mnt - < pkgLists/systemLists/corePkgs.txt
 
-					MKINIT_KERNEL="mkinitcpio -p linux"
+					KERNEL="linux"
 					
 					# Update mkinitcpio.conf
 					sed -i 's/MODULES=()/MODULES=(ext4)/g' /mnt/etc/mkinitcpio.conf
 					sed -i '/^HOOKS=/c\HOOKS=(base systemd autodetect modconf kms keyboard keymap plymouth sd-vconsole block filesystems fsck resume shutdown)' /mnt/etc/mkinitcpio.conf
 
-					arch-chroot /mnt/ $MKINIT_KERNEL
+					arch-chroot /mnt/ mkinitcpio -p $KERNEL
 					
 					# Generate fstab
 					genfstab -Lp /mnt > /mnt/etc/fstab
@@ -399,13 +401,13 @@ function_installation_guide() {
 					pacstrap /mnt - < pkgLists/systemLists/linux-ltsPkgs.txt
 					pacstrap /mnt - < pkgLists/systemLists/corePkgs.txt
 
-					MKINIT_KERNEL="mkinitcpio -p linux-lts"
+					KERNEL="linux-lts"
 					
 					# Update mkinitcpio.conf
 					sed -i 's/MODULES=()/MODULES=(ext4)/g' /mnt/etc/mkinitcpio.conf
 					sed -i '/^HOOKS=/c\HOOKS=(base systemd autodetect modconf kms keyboard keymap plymouth sd-vconsole block filesystems fsck resume shutdown)' /mnt/etc/mkinitcpio.conf
 
-					arch-chroot /mnt/ $MKINIT_KERNEL
+					arch-chroot /mnt/ mkinitcpio -p $KERNEL
 
 					# Generate fstab
 					genfstab -Lp /mnt > /mnt/etc/fstab
@@ -419,13 +421,13 @@ function_installation_guide() {
 					pacstrap /mnt - < pkgLists/systemLists/linux-zenPkgs.txt
 					pacstrap /mnt - < pkgLists/systemLists/corePkgs.txt
 
-					MKINIT_KERNEL="mkinitcpio -p linux-zen"
+					KERNEL="linux-zen"
 
 					# Update mkinitcpio.conf
 					sed -i 's/MODULES=()/MODULES=(ext4)/g' /mnt/etc/mkinitcpio.conf
 					sed -i '/^HOOKS=/c\HOOKS=(base systemd autodetect modconf kms keyboard keymap plymouth sd-vconsole block filesystems fsck resume shutdown)' /mnt/etc/mkinitcpio.conf
 
-					arch-chroot /mnt/ $MKINIT_KERNEL
+					arch-chroot /mnt/ mkinitcpio -p $KERNEL
 
 					# Generate fstab
 					genfstab -Lp /mnt > /mnt/etc/fstab
@@ -440,13 +442,13 @@ function_installation_guide() {
 					pacstrap /mnt - < pkgLists/systemLists/corePkgs.txt
 					#pacstrap /mnt - < pkgLists/systemLists/hardenedPkgs.txt
 
-					MKINIT_KERNEL="mkinitcpio -p linux-hardened"
+					KERNEL="linux-hardened"
 
 					# Update mkinitcpio.conf
 					sed -i 's/MODULES=()/MODULES=(ext4)/g' /mnt/etc/mkinitcpio.conf
 					sed -i '/^HOOKS=/c\HOOKS=(base systemd autodetect modconf kms keyboard keymap plymouth sd-vconsole block sd-encrypt lvm2 filesystems fsck resume shutdown)' /mnt/etc/mkinitcpio.conf
 
-					arch-chroot /mnt/ $MKINIT_KERNEL
+					arch-chroot /mnt/ mkinitcpio -p $KERNEL
 
 					# Generate fstab
 					genfstab -Lp /mnt > /mnt/etc/fstab
@@ -461,7 +463,7 @@ function_installation_guide() {
 
 					UUID_CRYPT_DRIVE=$(blkid -s UUID -o value $CRYPT_DRIVE)
 
-					sed -i "s/GRUB_CMDLINE_LINUX=\"\"/GRUB_CMDLINE_LINUX=\"rd.luks.name=$UUID_CRYPT_DRIVE=crypt rw root=\/dev\/mapper\/crypt-root\"/" /etc/default/grub
+					sed -i "s/GRUB_CMDLINE_LINUX=\"\"/GRUB_CMDLINE_LINUX=\"rd.luks.name=$UUID_CRYPT_DRIVE=crypt rw root=\/dev\/mapper\/crypt-root\"/" /mnt/etc/default/grub
 
 					arch-chroot /mnt/ grub-install --target=x86_64-efi --efi-directory=/efi --bootloader-id=Arch-Linux-Grub --recheck --debug
 
@@ -484,6 +486,7 @@ function_installation_guide() {
 			## Set language
 			echo "LANG=$SELECTED_LOCALE" > /mnt/etc/locale.conf
 			sed -i 's/#//g' /mnt/etc/locale.conf
+			sed -i -e 's/ .*//' /mnt/etc/locale.conf
 
 			## Set keymap
 			arch-chroot /mnt/ localectl set-keymap "$CHOSEN_SYSTEM_KEYBOARD_LAYOUT"
@@ -547,19 +550,19 @@ function_installation_guide() {
 
 			arch-chroot /mnt/ grub-mkconfig -o /boot/grub/grub.cfg
 
-			arch-chroot /mnt $MKINIT_KERNEL
+			arch-chroot /mnt/ mkinitcpio -p $KERNEL
 
 			## Reboot system
-			#whiptail --title "Installation is complete" --yesno "Restart computer?" 32 128 3>&1 1>&2 2>&3
+			whiptail --title "Installation is complete" --yesno "Restart computer?" 32 128 3>&1 1>&2 2>&3
 
-			#if [[ $? -eq 0 ]]; then
-			#		umount -a
-			#		systemctl reboot --now
-			#	elif [[ $? -eq 1 ]]; then
-			#		whiptail --title "MESSAGE" --msgbox "Cancelling Process since user pressed <NO>. Returned to shell." 32 128 3>&1 1>&2 2>&3
-			#	elif [[ $? -eq 255 ]]; then
-			#		whiptail --title "MESSAGE" --msgbox "User pressed ESC. Returned to shell." 32 128 3>&1 1>&2 2>&3
-			#fi
+			if [[ $? -eq 0 ]]; then
+					umount -a
+					systemctl reboot --now
+				elif [[ $? -eq 1 ]]; then
+					whiptail --title "MESSAGE" --msgbox "Cancelling Process since user pressed <NO>. Returned to shell." 32 128 3>&1 1>&2 2>&3
+				elif [[ $? -eq 255 ]]; then
+					whiptail --title "MESSAGE" --msgbox "User pressed ESC. Returned to shell." 32 128 3>&1 1>&2 2>&3
+			fi
 
 
 
