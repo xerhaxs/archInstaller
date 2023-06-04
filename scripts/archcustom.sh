@@ -538,7 +538,7 @@ function_installation_guide() {
 			## Copy archcustom.sh + usercustom.sh to new installation
 			cp -R archcustom.sh /mnt/usr/local/bin
 			cp -R usercustom.sh /mnt/usr/local/bin
-			cp -R pkgs/ /mnt/usr/local/bin
+			cp -R pkgLists/ /mnt/usr/local/bin
 			chmod +x /mnt/usr/local/bin/archcustom.sh
 			chmod +x /mnt/usr/local/bin/usercustom.sh
 
