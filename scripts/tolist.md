@@ -1,0 +1,3 @@
+- vconsole.conf fix (zweites UTF8 entfernen)
+- radiolists to menulists
+- fix startup error 

@@ -197,6 +197,7 @@ function_partition_hardened() {
 
 	# Encrypt second partition
 	cryptsetup -c aes-xts-plain -y -s 512 luksFormat --type luks1 $CRYPT_DRIVE
+	#cryptsetup -c aes-xts-plain -y -s 512 luksFormat $CRYPT_DRIVE --label crypt-drive ## Unless Grub has full support for Luks2 this is not a valid option
 
 	# Open encrypted partition
 	cryptsetup luksOpen $CRYPT_DRIVE lvm
@@ -213,8 +214,8 @@ function_partition_hardened() {
 
 	# Create file system
 	mkfs.fat -F 32 -n UEFI $EFI_DRIVE
-	mkfs.ext4 -L root $CRYPT_HOME_DRIVE
-	mkfs.ext4 -L home $CRYPT_ROOT_DRIVE
+	mkfs.ext4 -L root $CRYPT_ROOT_DRIVE
+	mkfs.ext4 -L home $CRYPT_HOME_DRIVE
 
 	# Mount the file system
 	mount $CRYPT_ROOT_DRIVE /mnt/
@@ -242,7 +243,7 @@ function_select_timezone() {
 	TIMEZONELIST=$(timedatectl list-timezones)
 	# Show radiolist
 
-	TIMEZONE=$(whiptail --title "Timezone" --menu \
+	TIMEZONE=$(whiptail --title "Timezone" --radiolist \
 	"Choose your timezone:" 32 128 16 \
 	$(for TZ in $TIMEZONELIST; do \
 		echo $TZ \"\" off; \
@@ -269,7 +270,7 @@ function_system_local() {
 	done
 
 	# Generate the whiptail menu and save the results as an array
-	SELECTED_LOCALE=$(whiptail --title "Select Locale" --menu "Choose your locale:" 20 78 10 "${OPTIONS[@]}" 3>&1 1>&2 2>&3)
+	SELECTED_LOCALE=$(whiptail --title "Select Locale" --radiolist "Choose your locale:" 20 78 10 "${OPTIONS[@]}" 3>&1 1>&2 2>&3)
 
 	echo "Locale set to $SELECTED_LOCALE"
 }
@@ -286,7 +287,7 @@ function_system_keyboard_layout() {
 	done
 
 	# Show the Whiptail menu and set the keyboard layout
-	CHOSEN_SYSTEM_KEYBOARD_LAYOUT=$(whiptail --title "Select Keyboard Layout" --menu "Chose your keyboard layout:" 32 128 16 "${LAYOUT_MENU_LIST[@]}" 3>&1 1>&2 2>&3)
+	CHOSEN_SYSTEM_KEYBOARD_LAYOUT=$(whiptail --title "Select Keyboard Layout" --radiolist "Chose your keyboard layout:" 32 128 16 "${LAYOUT_MENU_LIST[@]}" 3>&1 1>&2 2>&3)
 }
 
 ## Function to set the root credentials
@@ -379,8 +380,9 @@ function_installation_guide() {
 					pacstrap /mnt - < pkgLists/systemLists/corePkgs.txt
 
 					MKINIT_KERNEL="mkinitcpio -p linux"
-
+					
 					# Update mkinitcpio.conf
+					sed -i 's/MODULES=()/MODULES=(ext4)/g' /mnt/etc/mkinitcpio.conf
 					sed -i '/^HOOKS=/c\HOOKS=(base systemd autodetect modconf kms keyboard keymap plymouth sd-vconsole block filesystems fsck resume shutdown)' /mnt/etc/mkinitcpio.conf
 
 					arch-chroot /mnt/ $MKINIT_KERNEL
@@ -388,7 +390,7 @@ function_installation_guide() {
 					# Generate fstab
 					genfstab -Lp /mnt > /mnt/etc/fstab
 
-					arch-chroot /mnt/ grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB --recheck --debug
+					arch-chroot /mnt/ grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=Arch-Linux-Grub --recheck --debug
 
 					arch-chroot /mnt/ grub-mkconfig -o /boot/grub/grub.cfg
 
@@ -400,6 +402,7 @@ function_installation_guide() {
 					MKINIT_KERNEL="mkinitcpio -p linux-lts"
 					
 					# Update mkinitcpio.conf
+					sed -i 's/MODULES=()/MODULES=(ext4)/g' /mnt/etc/mkinitcpio.conf
 					sed -i '/^HOOKS=/c\HOOKS=(base systemd autodetect modconf kms keyboard keymap plymouth sd-vconsole block filesystems fsck resume shutdown)' /mnt/etc/mkinitcpio.conf
 
 					arch-chroot /mnt/ $MKINIT_KERNEL
@@ -407,7 +410,7 @@ function_installation_guide() {
 					# Generate fstab
 					genfstab -Lp /mnt > /mnt/etc/fstab
 
-					arch-chroot /mnt/ grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB --recheck --debug
+					arch-chroot /mnt/ grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=Arch-Linux-Grub --recheck --debug
 
 					arch-chroot /mnt/ grub-mkconfig -o /boot/grub/grub.cfg
 
@@ -419,6 +422,7 @@ function_installation_guide() {
 					MKINIT_KERNEL="mkinitcpio -p linux-zen"
 
 					# Update mkinitcpio.conf
+					sed -i 's/MODULES=()/MODULES=(ext4)/g' /mnt/etc/mkinitcpio.conf
 					sed -i '/^HOOKS=/c\HOOKS=(base systemd autodetect modconf kms keyboard keymap plymouth sd-vconsole block filesystems fsck resume shutdown)' /mnt/etc/mkinitcpio.conf
 
 					arch-chroot /mnt/ $MKINIT_KERNEL
@@ -426,7 +430,7 @@ function_installation_guide() {
 					# Generate fstab
 					genfstab -Lp /mnt > /mnt/etc/fstab
 
-					arch-chroot /mnt/ grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB --recheck --debug
+					arch-chroot /mnt/ grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=Arch-Linux-Grub --recheck --debug
 
 					arch-chroot /mnt/ grub-mkconfig -o /boot/grub/grub.cfg
 
@@ -439,6 +443,7 @@ function_installation_guide() {
 					MKINIT_KERNEL="mkinitcpio -p linux-hardened"
 
 					# Update mkinitcpio.conf
+					sed -i 's/MODULES=()/MODULES=(ext4)/g' /mnt/etc/mkinitcpio.conf
 					sed -i '/^HOOKS=/c\HOOKS=(base systemd autodetect modconf kms keyboard keymap plymouth sd-vconsole block sd-encrypt lvm2 filesystems fsck resume shutdown)' /mnt/etc/mkinitcpio.conf
 
 					arch-chroot /mnt/ $MKINIT_KERNEL
@@ -446,13 +451,19 @@ function_installation_guide() {
 					# Generate fstab
 					genfstab -Lp /mnt > /mnt/etc/fstab
 
-					arch-chroot /mnt/ grub-install --target=x86_64-efi --efi-directory=/efi --bootloader-id=GRUB --recheck --debug
-
 					sed -i 's/#GRUB_ENABLE_CRYPTODISK=y/GRUB_ENABLE_CRYPTODISK=y/g' /mnt/etc/default/grub
 
 					sed -i 's/#GRUB_DISABLE_OS_PROBER=false/GRUB_DISABLE_OS_PROBER=false/g' /mnt/etc/default/grub
 
 					sed -i 's/GRUB_DISABLE_RECOVERY=true/GRUB_DISABLE_RECOVERY=false/g' /mnt/etc/default/grub
+
+					sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT="loglevel=3 quiet"/GRUB_CMDLINE_LINUX_DEFAULT="quiet splash loglevel=3 udev.log-priority=3 vt.global_cursor_default=1"/g' /mnt/etc/default/grub
+
+					UUID_CRYPT_DRIVE=$(blkid -s UUID -o value $CRYPT_DRIVE)
+
+					sed -i "s/GRUB_CMDLINE_LINUX=\"\"/GRUB_CMDLINE_LINUX=\"rd.luks.name=$UUID_CRYPT_DRIVE=crypt rw root=\/dev\/mapper\/crypt-root\"/" /etc/default/grub
+
+					arch-chroot /mnt/ grub-install --target=x86_64-efi --efi-directory=/efi --bootloader-id=Arch-Linux-Grub --recheck --debug
 
 					arch-chroot /mnt/ grub-mkconfig -o /boot/grub/grub.cfg
 			fi
