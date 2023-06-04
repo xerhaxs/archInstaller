@@ -33,7 +33,6 @@ function_start_installation_guide() {
 			*)
 				whiptail --title "ERROR - Unsupported system detected!" --yesno "Your system is not officially supported by this script. It is not recommended to run this script on not officially supported systems, as it can cause damage to your installed systems or it might not work properly. If you decide to run this script anyway - you have been warned! Do you want to continue?" 32 128 3>&1 1>&2 2>&3
 				if [[ $? -eq 0 ]]; then
-						pacman -Syyu hwinfo git wget
 						function_installation_guide
 					elif [[ $? -eq 1 ]]; then
 						whiptail --title "MESSAGE" --msgbox "Cancelling Process since user pressed <NO>." 32 128 3>&1 1>&2 2>&3
@@ -382,7 +381,7 @@ function_installation_guide () {
 
 						sudo firewall-cmd --permanent --zone=home --add-service=http
 						sudo firewall-cmd --permanent --zone=home --add-service=https
-						asudo firewall-cmd --permanent --zone=home --add-service={samba,samba-client,samba-dc}
+						sudo firewall-cmd --permanent --zone=home --add-service={samba,samba-client,samba-dc}
 						sudo firewall-cmd --permanent --zone=libvirt --add-service=http
 						sudo firewall-cmd --permanent --zone=libvirt --add-service=https
 						sudo firewall-cmd --permanent --zone=libvirt --add-service={samba,samba-client,samba-dc}
