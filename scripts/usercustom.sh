@@ -196,12 +196,13 @@ function_installation_guide () {
 
 
             ## Install yay package manager
+			SOURCE_DIR=$(pwd)
             mkdir ~/build
             cd  ~/build
             git clone https://aur.archlinux.org/yay.git
             cd ~/build/yay
             makepkg -si --noconfirm
-			cd
+			cd $SOURCE_DIR
 
             ## Install System Packages
             yay -S --needed --noconfirm - < pkgLists/systemLists/systemPkgs.txt
@@ -217,7 +218,7 @@ function_installation_guide () {
 					#arch-chroot / modprobe msr
 					#arch-chroot / sh -c "echo msr > /etc/modules-load.d/msr.conf"
 					#yay -S disable-c6-systemd
-					#arch-chroot / systemctl enable disable-c6.service
+					#arch-chroot /mnt systemctl enable disable-c6.service
 			fi
 			
 			## Install Userspace
