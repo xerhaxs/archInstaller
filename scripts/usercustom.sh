@@ -266,18 +266,22 @@ function_installation_guide () {
 			## Install / Set Login-Manager
 			if [ $CHOSEN_LOGINMANAGER == "SDDM" ]; then
 					echo "Set LightDM as Login-Manager..."
+					yay -S --needed --noconfirm sddm
 					sudo systemctl enable sddm
-					yay -S --needed --noconfirm sddm-catppuccin-git
+					yay -S --needed --noconfirm 
 				elif [ $CHOSEN_LOGINMANAGER == "GDM" ]; then
 					echo "Set LightDM as Login-Manager..."
+					yay -S --needed --noconfirm gdm
 					sudo systemctl enable gdm
 				elif [ $CHOSEN_LOGINMANAGER == "LightDM" ]; then
 					echo "Set LightDM as Login-Manager..."
+					yay -S --needed --noconfirm lightdm lightdm-gtk-greeter
 					sudo systemctl enable lightdm
 			fi
 
 			## Install / Set system theme
 			yay -S --needed --noconfirm - < pkgLists/themeLists/themePkgs.txt
+			
 			if [ $CHOSEN_THEME == "Default" ]; then
 					echo "Set system theme to Default..."
 				elif [ $CHOSEN_THEME == "Catppuccin Latte" ]; then

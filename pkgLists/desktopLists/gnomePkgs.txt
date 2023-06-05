@@ -2,7 +2,6 @@ gnome-shell
 gnome-tweaks
 gnome-usage
 dconf-editor
-gdm
 gnome-power-manager
 gnome-themes-extra
 gnome-applets
