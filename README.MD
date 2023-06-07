@@ -12,3 +12,5 @@ Feel free to use or modify!
 - [ ] Add a dotfile-API / Add my custom dotfiles
 - [ ] Optimize the UX / UI of the script
   - [ ] Change radiolists to menulists
+- [ ] Add support for MBR and BIOS systems
+- [ ] Add option to securly format the installation drive
