@@ -100,12 +100,12 @@ function_detect_microcode() {
 
 ## Function to detect GPU driver
 function_detect_gpu() {
-	if lshw -C display | grep "AMD"; then
+	if lspci | grep VGA | grep "AMD"; then
 			echo "Add AMD-driver to installation query, because AMD GPU has been found..."
 			GPU_DRIVER="pkgLists/driverLists/amdGpuPkgs.txt"
 			MODULES_DRIVER="sed -i 's/MODULES=(ext4 btusb)/MODULES=(ext4 btusb amdgpu)/g' /etc/mkinitcpio.conf"
 
-		elif lshw -C display | grep "NVIDIA"; then
+		elif lspci | grep VGA | grep "NVIDIA"; then
 				CHOSEN_NVIDIA_DRIVER=$(whiptail --title "Nvidia driver selection" --menu "Do you want to use proprietary or open-source drivers for your Nvidia card?" 32 128 2 \
 				"Proprietary" "Much better performance" \
 				"Open-Source" "Free and open-source" 3>&1 1>&2 2>&3)
