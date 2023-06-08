@@ -12,7 +12,7 @@
 
 ## Function for sartup message
 function_startup_message() {
-	whiptail --title "Start installation" --msgbox "This script will guide you through the installation of customized settings for Arch Liunx.	Notice, that this script will only work on Arch Linux (and maybe arch-based systems)." 32 128 3>&1 1>&2 2>&3
+	whiptail --nocancel --title "Start installation" --msgbox "This script will guide you through the installation of customized settings for Arch Liunx.	Notice, that this script will only work on Arch Linux (and maybe arch-based systems)." 32 128 3>&1 1>&2 2>&3
 }
 
 ## Function to start the installation guide
@@ -51,8 +51,8 @@ function_start_installation_guide() {
 
 ## Function to configurate the Desktop environment / Window Manager
 function_select_enviroment() {
-	CHOSEN_USERSPACE=$(whiptail --title "Package Selection" --checklist "Which desktop environment or window manager do you want to install?" 32 128 16 \
-	'Plasma'		'X11 + Wayland' 	off \
+	CHOSEN_USERSPACE=$(whiptail --nocancel --title "Package Selection" --checklist "Which desktop environment or window manager do you want to install?" 32 128 16 \
+	'Plasma'		'X11 + Wayland' 	on \
 	'Gnome' 		'X11 + Wayland' 	off \
 	'XFCE' 			'X11' 				off \
 	'Sway' 			'Wayland' 			off \
@@ -64,8 +64,8 @@ function_select_enviroment() {
 
 ## Function to configurate the Login-Manager
 function_select_login_manager() {
-	CHOSEN_LOGINMANAGER=$(whiptail --title "Package Selection" --radiolist "Which Login-Manager do you want to use?" 32 128 16 \
-	'SDDM'		'Recommended for Plasma' 	on 	\
+	CHOSEN_LOGINMANAGER=$(whiptail --nocancel --title "Package Selection" --radiolist "Which Login-Manager do you want to use?" 32 128 16 \
+	'SDDM'		'Recommended for Plasma' 	on	\
 	'GDM' 		'Recommended for Gnomme' 	off \
 	'LightDM' 	'Recommended for XFCE'	 	off \
 	3>&1 1>&2 2>&3)
@@ -75,7 +75,7 @@ function_select_login_manager() {
 
 ## Function to configurate user specific packages
 function_select_package() {
-	CHOSEN_USERPACKAGES=$(whiptail --title "Package Selection" --checklist "Which desktop environment or window manager do you want to install?" 32 128 16 \
+	CHOSEN_USERPACKAGES=$(whiptail --nocancel --title "Package Selection" --checklist "Which desktop environment or window manager do you want to install?" 32 128 16 \
 	'Base'				'Browser, Editor, File manager, Calculator etc.' 	on 	\
 	'Editing' 			'Photo-, Video-, Audiotools' 						off \
 	'Flatpaks'			'Flatpaksupport, Discord, Fluentreader'				off	\
@@ -95,7 +95,7 @@ function_select_package() {
 
 ## Function to configurate portable device optimizations
 function_select_portable_device_optimization() {
-	whiptail --title "Package Selection" --yesno "Do you want to install portable device optimizations like TLP for longer battery life and enable touch support?" 32 128 3>&1 1>&2 2>&3
+	whiptail --nocancel --title "Package Selection" --yesno "Do you want to install portable device optimizations like TLP for longer battery life and enable touch support?" 32 128 3>&1 1>&2 2>&3
 	if [[ $? -eq 0 ]]; then
 			BATTERY_OPTIMIZATION=true
 		else
@@ -105,7 +105,7 @@ function_select_portable_device_optimization() {
 
 ## Function to configurate the system wide theming
 function_select_theme() {
-	CHOSEN_THEME=$(whiptail --title "Theming" --radiolist "Which system wide theme do you prefer?" 32 128 16 \
+	CHOSEN_THEME=$(whiptail --nocancel --title "Theming" --radiolist "Which system wide theme do you prefer?" 32 128 16 \
 	'Default'				'Default theme - No modifications'	on	\
 	'Catppuccin Latte'		'Light theme'						off	\
 	'Catppuccin Frappé'		'Light dark theme'					off	\
@@ -122,17 +122,17 @@ function_timeshift_setup() {
 	backup_dir="/backup"
 
 	# Set the backup frequency
-	backup_frequency=$(whiptail --title "Backup Frequency" --menu "Choose how often you want to backup:" 15 60 4 \
+	backup_frequency=$(whiptail --nocancel --title "Backup Frequency" --menu "Choose how often you want to backup:" 15 60 4 \
 			"1" "Daily" \
 			"2" "Weekly" \
 			"3" "Monthly" \
 			"4" "Yearly" 3>&1 1>&2 2>&3)
 
 	# Set the backup time
-	backup_time=$(whiptail --title "Backup Time" --inputbox "Enter the time you want to backup (HH:MM):" 10 60 3>&1 1>&2 2>&3)
+	backup_time=$(whiptail --nocancel --title "Backup Time" --inputbox "Enter the time you want to backup (HH:MM):" 10 60 3>&1 1>&2 2>&3)
 
 	# Set the backup retention period
-	backup_retention=$(whiptail --title "Backup Retention Period" --inputbox "Enter the number of backups you want to keep:" 10 60 3>&1 1>&2 2>&3)
+	backup_retention=$(whiptail --nocancel --title "Backup Retention Period" --inputbox "Enter the number of backups you want to keep:" 10 60 3>&1 1>&2 2>&3)
 
 	# Create the backup schedule
 	case $backup_frequency in
@@ -282,36 +282,36 @@ function_installation_guide () {
 			## Install / Set system theme
 			yay -S --needed --noconfirm - < pkgLists/themeLists/themePkgs.txt
 			
-			if [ $CHOSEN_THEME == "Default" ]; then
+			if [[ $CHOSEN_THEME == "Default" ]]; then
 					echo "Set system theme to Default..."
-				elif [ $CHOSEN_THEME == "Catppuccin Latte" ]; then
+				elif [[ $CHOSEN_THEME == "Catppuccin Latte" ]]; then
 					echo "Set system theme to Catppuccin Latte..."
 					yay -S --needed --noconfirm - < pkgLists/themeLists/catppuccinLattePkgs.txt
 					sudo plymouth-set-default-theme -R catppuccin-latte
-					ln -sf ”/usr/share/themes/Catppuccin-Latte-Standard-Mauve-Dark/gtk-4.0/assets” ”/usr/share/gtk-4.0/assets”
-					ln -sf ”/usr/share/themes/Catppuccin-Latte-Standard-Mauve-Dark/gtk-4.0/gtk.css” ”/usr/share/gtk-4.0/gtk.css”
-					ln -sf "/usr/share/themes/Catppuccin-Latte-Standard-Mauve-Dark/gtk-4.0/gtk-dark.css” "/usr/share/gtk-4.0/gtk-dark.css”
-				elif [ $CHOSEN_THEME == "Catppuccin Frappé" ]; then
+					ln -sf "/usr/share/themes/Catppuccin-Latte-Standard-Mauve-Dark/gtk-4.0/assets" "/usr/share/gtk-4.0/assets"
+					ln -sf "/usr/share/themes/Catppuccin-Latte-Standard-Mauve-Dark/gtk-4.0/gtk.css" "/usr/share/gtk-4.0/gtk.css"
+					ln -sf "/usr/share/themes/Catppuccin-Latte-Standard-Mauve-Dark/gtk-4.0/gtk-dark.css" "/usr/share/gtk-4.0/gtk-dark.css"
+				elif [[ $CHOSEN_THEME == "Catppuccin Frappé" ]]; then
 					echo "Set system theme to Catppuccin Frappé..."
 					yay -S --needed --noconfirm - < pkgLists/themeLists/catppuccinFrappePkgs.txt
 					sudo plymouth-set-default-theme -R catppuccin-frappe
-					ln -sf ”/usr/share/themes/Catppuccin-Frappe-Standard-Mauve-Dark/gtk-4.0/assets” ”/usr/share/gtk-4.0/assets”
-					ln -sf ”/usr/share/themes/Catppuccin-Frappe-Standard-Mauve-Dark/gtk-4.0/gtk.css” ”/usr/share/gtk-4.0/gtk.css”
-					ln -sf "/usr/share/themes/Catppuccin-Frappe-Standard-Mauve-Dark/gtk-4.0/gtk-dark.css” "/usr/share/gtk-4.0/gtk-dark.css”
-				elif [ $CHOSEN_THEME == "Catppuccin Macchiato" ]; then
+					ln -sf "/usr/share/themes/Catppuccin-Frappe-Standard-Mauve-Dark/gtk-4.0/assets" "/usr/share/gtk-4.0/assets"
+					ln -sf "/usr/share/themes/Catppuccin-Frappe-Standard-Mauve-Dark/gtk-4.0/gtk.css" "/usr/share/gtk-4.0/gtk.css"
+					ln -sf "/usr/share/themes/Catppuccin-Frappe-Standard-Mauve-Dark/gtk-4.0/gtk-dark.css" "/usr/share/gtk-4.0/gtk-dark.css"
+				elif [[ $CHOSEN_THEME == "Catppuccin Macchiato" ]]; then
 					echo "Set system theme to Catppuccin Macchiato..."
 					yay -S --needed --noconfirm - < pkgLists/themeLists/catppuccinMacchiatoPkgs.txt
 					sudo plymouth-set-default-theme -R catppuccin-macchiato
-					ln -sf ”/usr/share/themes/Catppuccin-Macchiato-Standard-Mauve-Dark/gtk-4.0/assets” ”/usr/share/gtk-4.0/assets”
-					ln -sf ”/usr/share/themes/Catppuccin-Macchiato-Standard-Mauve-Dark/gtk-4.0/gtk.css” ”/usr/share/gtk-4.0/gtk.css”
-					ln -sf "/usr/share/themes/Catppuccin-Macchiato-Standard-Mauve-Dark/gtk-4.0/gtk-dark.css” "/usr/share/gtk-4.0/gtk-dark.css”
-				elif [ $CHOSEN_THEME == "Catppuccin Mocha" ]; then
+					ln -sf "/usr/share/themes/Catppuccin-Macchiato-Standard-Mauve-Dark/gtk-4.0/assets" "/usr/share/gtk-4.0/assets"
+					ln -sf "/usr/share/themes/Catppuccin-Macchiato-Standard-Mauve-Dark/gtk-4.0/gtk.css" "/usr/share/gtk-4.0/gtk.css"
+					ln -sf "/usr/share/themes/Catppuccin-Macchiato-Standard-Mauve-Dark/gtk-4.0/gtk-dark.css" "/usr/share/gtk-4.0/gtk-dark.css"
+				elif [[ $CHOSEN_THEME == "Catppuccin Mocha" ]]; then
 					echo "Set system theme to Catppuccin Mocha..."
 					yay -S --needed --noconfirm - < pkgLists/themeLists/catppuccinMochaPkgs.txt
 					sudo plymouth-set-default-theme -R catppuccin-mocha
-					ln -sf ”/usr/share/themes/Catppuccin-Mocha-Standard-Mauve-Dark/gtk-4.0/assets” ”/usr/share/gtk-4.0/assets”
-					ln -sf ”/usr/share/themes/Catppuccin-Mocha-Standard-Mauve-Dark/gtk-4.0/gtk.css” ”/usr/share/gtk-4.0/gtk.css”
-					ln -sf "/usr/share/themes/Catppuccin-Mocha-Standard-Mauve-Dark/gtk-4.0/gtk-dark.css” "/usr/share/gtk-4.0/gtk-dark.css”
+					ln -sf "/usr/share/themes/Catppuccin-Mocha-Standard-Mauve-Dark/gtk-4.0/assets" "/usr/share/gtk-4.0/assets"
+					ln -sf "/usr/share/themes/Catppuccin-Mocha-Standard-Mauve-Dark/gtk-4.0/gtk.css" "/usr/share/gtk-4.0/gtk.css"
+					ln -sf "/usr/share/themes/Catppuccin-Mocha-Standard-Mauve-Dark/gtk-4.0/gtk-dark.css" "/usr/share/gtk-4.0/gtk-dark.css"
 			fi
 
 			## Install Userspace PKGs
