@@ -14,3 +14,4 @@ Feel free to use or modify!
   - [ ] Change radiolists to menulists
 - [ ] Add support for MBR and BIOS systems
 - [ ] Add option to securly format the installation drive
+- [ ] Add GPU support for intel

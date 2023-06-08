@@ -121,8 +121,8 @@ function_detect_gpu() {
 					GPU_DRIVER="pkgLists/driverLists/nvidiaOpenGpuPkgs.txt"
 					MODULES_DRIVER="sed -i 's/MODULES=(ext4 btusb)/MODULES=(ext4 btusb nouveau)/g' /etc/mkinitcpio.conf"
 			fi
-# add support for qemu hardware
-#MODULES_DRIVER="sed -i 's/MODULES=(ext4 btusb)/MODULES=(ext4 btusb qxl bochs_drm virtio-gpu virtio virtio_scsi virtio_blk virtio_pci virtio_net virtio_ring)/g' /etc/mkinitcpio.conf"
+				# add support for qemu hardware
+				#MODULES_DRIVER="sed -i 's/MODULES=(ext4 btusb)/MODULES=(ext4 btusb qxl bochs_drm virtio-gpu virtio virtio_scsi virtio_blk virtio_pci virtio_net virtio_ring)/g' /etc/mkinitcpio.conf"
 		else
 			whiptail --title "Hardware Configuration" --msgbox "Unknown GPU detected. Continue installation without GPU-Drivers" 32 128 3>&1 1>&2 2>&3
 	fi
@@ -163,8 +163,14 @@ function_partition_basic() {
 	parted $CHOSEN_DRIVE mkpart primary ext4 513MiB 100%
 
 	# Init boot + system drive
-	BOOT_DRIVE=$CHOSEN_DRIVE"1"
-	SYSTEM_DRIVE=$CHOSEN_DRIVE"2"
+	if [[ $CHOSEN_DRIVE == *"nvme"* ]]; then 
+			BOOT_DRIVE=$CHOSEN_DRIVE"p1"
+			SYSTEM_DRIVE=$CHOSEN_DRIVE"p2"
+		else
+			BOOT_DRIVE=$CHOSEN_DRIVE"1"
+			SYSTEM_DRIVE=$CHOSEN_DRIVE"2"
+	fi
+
 
 	# Create file system
 	mkfs.fat -F 32 -n UEFI $BOOT_DRIVE
@@ -194,9 +200,16 @@ function_partition_hardened() {
 	parted $CHOSEN_DRIVE mkpart primary fat32 1MiB 513MiB
 	parted $CHOSEN_DRIVE set 1 esp on
 	parted $CHOSEN_DRIVE --script mkpart primary ext4 513MiB 100%
-	EFI_DRIVE=$CHOSEN_DRIVE"1"
-	CRYPT_DRIVE=$CHOSEN_DRIVE"2"
 
+	# Init boot + crypt drive
+	if [[ $CHOSEN_DRIVE == *"nvme"* ]]; then 
+			EFI_DRIVE=$CHOSEN_DRIVE"p1"
+			CRYPT_DRIVE=$CHOSEN_DRIVE"p2"
+		else
+			EFI_DRIVE=$CHOSEN_DRIVE"1"
+			CRYPT_DRIVE=$CHOSEN_DRIVE"2"
+	fi
+	
 	# Encrypt second partition
 	cryptsetup -c aes-xts-plain -y -s 512 luksFormat --type luks1 $CRYPT_DRIVE
 	#cryptsetup -c aes-xts-plain -y -s 512 luksFormat $CRYPT_DRIVE --label crypt-drive ## Unless Grub has full support for Luks2 this is not a valid option
