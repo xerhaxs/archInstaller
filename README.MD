@@ -38,5 +38,5 @@ chmod +x archcustom.sh
 - [ ] Add support for MBR and BIOS systems
 - [X] Add option to securely wipe the installation drive
 - [ ] Add GPU support for intel
-- [ ] Enable fast boot (skip grub menu)
+- [X] Enable fast boot (skip grub menu)
 - [ ] Remove the second password entering process for FDE with boot

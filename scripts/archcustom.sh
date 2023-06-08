@@ -482,6 +482,8 @@ function_installation_guide() {
 					# Generate fstab
 					genfstab -Lp /mnt > /mnt/etc/fstab
 
+					sed -i 's/GRUB_TIMEOUT=5/GRUB_TIMEOUT=0/g' /mnt/etc/default/grub
+
 					#sed -i 's/#GRUB_DISABLE_OS_PROBER=false/GRUB_DISABLE_OS_PROBER=false/g' /mnt/etc/default/grub
 
 					sed -i 's/GRUB_DISABLE_RECOVERY=true/GRUB_DISABLE_RECOVERY=false/g' /mnt/etc/default/grub
@@ -506,6 +508,8 @@ function_installation_guide() {
 
 					# Generate fstab
 					genfstab -Lp /mnt > /mnt/etc/fstab
+
+					sed -i 's/GRUB_TIMEOUT=5/GRUB_TIMEOUT=0/g' /mnt/etc/default/grub
 
 					#sed -i 's/#GRUB_DISABLE_OS_PROBER=false/GRUB_DISABLE_OS_PROBER=false/g' /mnt/etc/default/grub
 
@@ -537,6 +541,8 @@ function_installation_guide() {
 					genfstab -Lp /mnt > /mnt/etc/fstab
 
 					sed -i 's/#GRUB_ENABLE_CRYPTODISK=y/GRUB_ENABLE_CRYPTODISK=y/g' /mnt/etc/default/grub
+
+					sed -i 's/GRUB_TIMEOUT=5/GRUB_TIMEOUT=0/g' /mnt/etc/default/grub
 
 					#sed -i 's/#GRUB_DISABLE_OS_PROBER=false/GRUB_DISABLE_OS_PROBER=false/g' /mnt/etc/default/grub
 
