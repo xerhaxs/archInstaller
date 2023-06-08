@@ -1,6 +1,6 @@
 ### archInstaller
 
-This is my version of an Arch install script with options menus via whiptail. The script is not finished yet - so you might encounter some bugs. ;)
+This is my version of an Arch install script with option menus via whiptail. The script is not finished yet - so you might encounter some bugs. ;)
 Feel free to use or modify!
 
 #### System requirements
@@ -12,7 +12,7 @@ Feel free to use or modify!
 #### Usage
 
 To use this installation script, simply download the newest release and make the `archcustom.sh` executable with `chmod +x archcustom.sh`.
-Then run the script with `./archcustom.sh` and follow the instructions. Make shur that you are connected to the internet, before starting the script.
+Then run the script with `./archcustom.sh` and follow the instructions. Make sure that you are connected to the internet, before starting the script.
 The installation script must be executed with root (not sudo)!
 After the installation process is done, you can reboot into the new system or chroot to run the usercustom.sh.
 
