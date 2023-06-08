@@ -128,13 +128,21 @@ function_detect_gpu() {
 	fi
 }
 
+## Function to set the system security level
+function_select_security() {
+	CHOSEN_SECURITY=$(whiptail --title "System configuration" --menu "What security option do you prefer?" 32 128 4 \
+	"Basic" 					"The system will be installed without any further tweaks for more security." \
+	"FDE" 		"The system will be installed with Full-Disk-Encryption." \
+	"FDE+BOOT"	"The system will be installed with Full-Disk-Encryption and the boot partition will be encrypted." 3>&1 1>&2 2>&3)
+}
+
 ## Kernel and system configuration
-function_select_system_type() {
-	CHOSEN_SYSTEM_TYPE=$(whiptail --title "Kernel and System configuration" --menu "Which Kernel option do you prefer?" 32 128 4 \
-	"Basic" 	"Everything will be installed on one partition. No security modules or special modifications. Normal Kernel." \
-	"Zen" 		"Everything will be installed on one partition. The Zen-Kernel will be used. Some tweaks for better performence will be made." \
-	"LTS"		"Everything will be installed on one partition. The LTS-Kernel will be used." \
-	"Hardened"	"The system will be a Fort Nox for your data. The system will be installed with SeLinux, Full Diks Encryption etc." 3>&1 1>&2 2>&3)
+function_select_kernel() {
+	CHOSEN_KERNEL=$(whiptail --title "Kernel and System configuration" --menu "Which Kernel option do you prefer?" 32 128 4 \
+	"Normal" 	"The normal Kernel will be used." \
+	"Zen" 		"The Zen-Kernel will be used. Some tweaks for better performence will be made." \
+	"LTS"		"The LTS-Kernel will be used. This kernel is better for stable systems." \
+	"Hardened"	"The Hardened Kernel will be used. Some tweaks for more securety will be made." 3>&1 1>&2 2>&3)
 }
 
 ## Function to set installation disk
@@ -379,7 +387,9 @@ function_installation_guide() {
 
 	function_detect_gpu
 
-	function_select_system_type
+	function_select_security
+
+	function_select_kernel
 
 
 	## Test for UEFI
@@ -424,74 +434,80 @@ function_installation_guide() {
 
 
 			### Hardware Configuration
-			## Install core packages
-			if [ $CHOSEN_SYSTEM_TYPE == "Basic" ]; then
-					function_partition_basic
-					pacstrap /mnt - < pkgLists/systemLists/linuxPkgs.txt
-					pacstrap /mnt - < pkgLists/systemLists/corePkgs.txt
-
+			## Set the kernel type
+			if [ $CHOSEN_KERNEL == "Normal" ]; then
+					KERNELPKGS="linuxPkgs.txt"
 					KERNEL="linux"
-					
-					# Update mkinitcpio.conf
-					sed -i 's/MODULES=()/MODULES=(ext4 btusb)/g' /mnt/etc/mkinitcpio.conf
-					sed -i '/^HOOKS=/c\HOOKS=(base systemd autodetect modconf kms keyboard keymap plymouth sd-vconsole block filesystems fsck resume shutdown)' /mnt/etc/mkinitcpio.conf
-
-					arch-chroot /mnt/ mkinitcpio -p $KERNEL
-					
-					# Generate fstab
-					genfstab -Lp /mnt > /mnt/etc/fstab
-
-					arch-chroot /mnt/ grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=Arch-Linux-Grub --recheck --debug
-
-					arch-chroot /mnt/ grub-mkconfig -o /boot/grub/grub.cfg
-
-				elif [ $CHOSEN_SYSTEM_TYPE == "Zen" ]; then
-					function_partition_basic
-					pacstrap /mnt - < pkgLists/systemLists/linux-ltsPkgs.txt
-					pacstrap /mnt - < pkgLists/systemLists/corePkgs.txt
-
+				
+				elif [ $CHOSENCHOSEN_KERNEL == "Zen" ]; then
+					KERNELPKGS="linux-ltsPkgs.txt"
 					KERNEL="linux-lts"
-					
-					# Update mkinitcpio.conf
-					sed -i 's/MODULES=()/MODULES=(ext4 btusb)/g' /mnt/etc/mkinitcpio.conf
-					sed -i '/^HOOKS=/c\HOOKS=(base systemd autodetect modconf kms keyboard keymap plymouth sd-vconsole block filesystems fsck resume shutdown)' /mnt/etc/mkinitcpio.conf
 
-					arch-chroot /mnt/ mkinitcpio -p $KERNEL
-
-					# Generate fstab
-					genfstab -Lp /mnt > /mnt/etc/fstab
-
-					arch-chroot /mnt/ grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=Arch-Linux-Grub --recheck --debug
-
-					arch-chroot /mnt/ grub-mkconfig -o /boot/grub/grub.cfg
-
-				elif [ $CHOSEN_SYSTEM_TYPE == "LTS" ]; then
-					function_partition_basic
-					pacstrap /mnt - < pkgLists/systemLists/linux-zenPkgs.txt
-					pacstrap /mnt - < pkgLists/systemLists/corePkgs.txt
-
+				elif [ $CHOSEN_KERNEL == "LTS" ]; then
+					KERNELPKGS="linux-zenPkgs.txt"
 					KERNEL="linux-zen"
 
+				elif [ $CHOSEN_KERNEL == "Hardened" ]; then
+					KERNELPKGS="linux-hardenedPkgs.txt"
+					KERNEL="linux-hardened"
+			fi
+
+			## Set and install the security options and the selected kernel
+			if [ $CHOSEN_SECURITY == "Basic" ]; then
+					function_partition_basic
+
+					pacstrap /mnt - < pkgLists/systemLists/$KERNELPKGS
+					pacstrap /mnt - < pkgLists/systemLists/corePkgs.txt
+
 					# Update mkinitcpio.conf
 					sed -i 's/MODULES=()/MODULES=(ext4 btusb)/g' /mnt/etc/mkinitcpio.conf
 					sed -i '/^HOOKS=/c\HOOKS=(base systemd autodetect modconf kms keyboard keymap plymouth sd-vconsole block filesystems fsck resume shutdown)' /mnt/etc/mkinitcpio.conf
+
+					arch-chroot /mnt/ mkinitcpio -p $KERNEL
+					
+					# Generate fstab
+					genfstab -Lp /mnt > /mnt/etc/fstab
+
+					sed -i 's/#GRUB_DISABLE_OS_PROBER=false/GRUB_DISABLE_OS_PROBER=false/g' /mnt/etc/default/grub
+
+					sed -i 's/GRUB_DISABLE_RECOVERY=true/GRUB_DISABLE_RECOVERY=false/g' /mnt/etc/default/grub
+
+					sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT="loglevel=3 quiet"/GRUB_CMDLINE_LINUX_DEFAULT="quiet splash loglevel=3 udev.log-priority=3 vt.global_cursor_default=1"/g' /mnt/etc/default/grub
+
+					arch-chroot /mnt/ grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=Arch-Linux-Grub --recheck --debug
+
+					arch-chroot /mnt/ grub-mkconfig -o /boot/grub/grub.cfg
+
+				elif [ $CHOSEN_SECURITY == "FDE" ]; then
+					function_partition_secured
+
+					pacstrap /mnt - < pkgLists/systemLists/$KERNELPKGS
+					pacstrap /mnt - < pkgLists/systemLists/corePkgs.txt
+					
+					# Update mkinitcpio.conf
+					sed -i 's/MODULES=()/MODULES=(ext4 btusb)/g' /mnt/etc/mkinitcpio.conf
+					sed -i '/^HOOKS=/c\HOOKS=(base systemd autodetect modconf kms keyboard keymap plymouth-encrypt sd-vconsole block sd-encrypt lvm2 filesystems fsck resume shutdown)' /mnt/etc/mkinitcpio.conf
 
 					arch-chroot /mnt/ mkinitcpio -p $KERNEL
 
 					# Generate fstab
 					genfstab -Lp /mnt > /mnt/etc/fstab
 
+					sed -i 's/#GRUB_DISABLE_OS_PROBER=false/GRUB_DISABLE_OS_PROBER=false/g' /mnt/etc/default/grub
+
+					sed -i 's/GRUB_DISABLE_RECOVERY=true/GRUB_DISABLE_RECOVERY=false/g' /mnt/etc/default/grub
+
+					sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT="loglevel=3 quiet"/GRUB_CMDLINE_LINUX_DEFAULT="quiet splash loglevel=3 udev.log-priority=3 vt.global_cursor_default=1"/g' /mnt/etc/default/grub
+
 					arch-chroot /mnt/ grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=Arch-Linux-Grub --recheck --debug
 
 					arch-chroot /mnt/ grub-mkconfig -o /boot/grub/grub.cfg
 
-				elif [ $CHOSEN_SYSTEM_TYPE == "Hardened" ]; then
+				elif [ $CHOSEN_SECURITY == "FDE+BOOT" ]; then
 					function_partition_hardened
-					pacstrap /mnt - < pkgLists/systemLists/linux-hardenedPkgs.txt
-					pacstrap /mnt - < pkgLists/systemLists/corePkgs.txt
-					#pacstrap /mnt - < pkgLists/systemLists/hardenedPkgs.txt
 
-					KERNEL="linux-hardened"
+					pacstrap /mnt - < pkgLists/systemLists/$KERNELPKGS
+					pacstrap /mnt - < pkgLists/systemLists/corePkgs.txt
 
 					# Update mkinitcpio.conf
 					sed -i 's/MODULES=()/MODULES=(ext4 btusb)/g' /mnt/etc/mkinitcpio.conf
@@ -518,7 +534,8 @@ function_installation_guide() {
 
 					arch-chroot /mnt/ grub-mkconfig -o /boot/grub/grub.cfg
 			fi
-			
+
+
 			### System Configuration
 
 			## Enable sudo without password for user(s) during installation
