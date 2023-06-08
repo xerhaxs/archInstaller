@@ -217,7 +217,7 @@ function_partition_secured() {
 	fi
 	
 	# Encrypt second partition
-	cryptsetup -c aes-xts-plain -y -s 512 luksFormat $CRYPT_DRIVE --label CRYPTDRIVE
+	cryptsetup --cipher aes-xts-plain64 --verify-passphrase --key-size 512 --hash sha512 luksFormat $CRYPT_DRIVE --label CRYPTDRIVE
 
 	# Open encrypted partition
 	cryptsetup luksOpen $CRYPT_DRIVE lvm
@@ -274,8 +274,7 @@ function_partition_hardened() {
 	fi
 	
 	# Encrypt second partition
-	cryptsetup -c aes-xts-plain -y -s 512 luksFormat --type luks1 $CRYPT_DRIVE
-	#cryptsetup -c aes-xts-plain -y -s 512 luksFormat $CRYPT_DRIVE --label crypt-drive ## Unless Grub has full support for Luks2 this is not a valid option
+	cryptsetup --cipher aes-xts-plain64 --verify-passphrase --key-size 512 --hash sha512 luksFormat --type luks1 $CRYPT_DRIVE --label CRYPTDRIVE
 
 	# Open encrypted partition
 	cryptsetup luksOpen $CRYPT_DRIVE lvm
@@ -468,7 +467,7 @@ function_installation_guide() {
 					# Generate fstab
 					genfstab -Lp /mnt > /mnt/etc/fstab
 
-					sed -i 's/#GRUB_DISABLE_OS_PROBER=false/GRUB_DISABLE_OS_PROBER=false/g' /mnt/etc/default/grub
+					#sed -i 's/#GRUB_DISABLE_OS_PROBER=false/GRUB_DISABLE_OS_PROBER=false/g' /mnt/etc/default/grub
 
 					sed -i 's/GRUB_DISABLE_RECOVERY=true/GRUB_DISABLE_RECOVERY=false/g' /mnt/etc/default/grub
 
@@ -493,7 +492,7 @@ function_installation_guide() {
 					# Generate fstab
 					genfstab -Lp /mnt > /mnt/etc/fstab
 
-					sed -i 's/#GRUB_DISABLE_OS_PROBER=false/GRUB_DISABLE_OS_PROBER=false/g' /mnt/etc/default/grub
+					#sed -i 's/#GRUB_DISABLE_OS_PROBER=false/GRUB_DISABLE_OS_PROBER=false/g' /mnt/etc/default/grub
 
 					sed -i 's/GRUB_DISABLE_RECOVERY=true/GRUB_DISABLE_RECOVERY=false/g' /mnt/etc/default/grub
 
@@ -524,7 +523,7 @@ function_installation_guide() {
 
 					sed -i 's/#GRUB_ENABLE_CRYPTODISK=y/GRUB_ENABLE_CRYPTODISK=y/g' /mnt/etc/default/grub
 
-					sed -i 's/#GRUB_DISABLE_OS_PROBER=false/GRUB_DISABLE_OS_PROBER=false/g' /mnt/etc/default/grub
+					#sed -i 's/#GRUB_DISABLE_OS_PROBER=false/GRUB_DISABLE_OS_PROBER=false/g' /mnt/etc/default/grub
 
 					sed -i 's/GRUB_DISABLE_RECOVERY=true/GRUB_DISABLE_RECOVERY=false/g' /mnt/etc/default/grub
 
