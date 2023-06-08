@@ -1,4 +1,3 @@
 avahi
 cups
-gimagereader-gtk
 simple-scan

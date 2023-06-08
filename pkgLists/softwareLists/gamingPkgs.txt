@@ -1,4 +1,3 @@
-antimicrox
 gamemode
 heroic-games-launcher-bin
 jdk8-openjdk

@@ -2,7 +2,16 @@
 godot
 qtcreator
 umbrello
+rpi-imager-bin
+nmap
+nodejs
+npm
 
+# Gaming
+antimicrox
+
+# Office
+gimagereader-gtk (tessarac would be better)
 
 ## Other
 keyboard-center
