@@ -395,6 +395,8 @@ function_installation_guide() {
 
 	function_select_installation_disk
 
+	function_select_disk_wipe
+
 	function_detect_microcode
 
 	function_detect_gpu

@@ -40,3 +40,4 @@ chmod +x archcustom.sh
 - [ ] Add GPU support for intel
 - [X] Enable fast boot (skip grub menu)
 - [ ] Remove the second password entering process for FDE with boot
+- [ ] Rewrite the locale.gen menu to make multiple languages possible
