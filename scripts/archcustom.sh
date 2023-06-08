@@ -499,6 +499,10 @@ function_installation_guide() {
 
 					sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT="loglevel=3 quiet"/GRUB_CMDLINE_LINUX_DEFAULT="quiet splash loglevel=3 udev.log-priority=3 vt.global_cursor_default=1"/g' /mnt/etc/default/grub
 
+					UUID_CRYPT_DRIVE=$(blkid -s UUID -o value $CRYPT_DRIVE)
+
+					sed -i "s/GRUB_CMDLINE_LINUX=\"\"/GRUB_CMDLINE_LINUX=\"rd.luks.name=$UUID_CRYPT_DRIVE=crypt rw root=\/dev\/mapper\/crypt-root\"/" /mnt/etc/default/grub
+
 					arch-chroot /mnt/ grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=Arch-Linux-Grub --recheck --debug
 
 					arch-chroot /mnt/ grub-mkconfig -o /boot/grub/grub.cfg
