@@ -486,7 +486,7 @@ function_installation_guide() {
 					
 					# Update mkinitcpio.conf
 					sed -i 's/MODULES=()/MODULES=(ext4 btusb)/g' /mnt/etc/mkinitcpio.conf
-					sed -i '/^HOOKS=/c\HOOKS=(base systemd autodetect modconf kms keyboard keymap plymouth-encrypt sd-vconsole block sd-encrypt lvm2 filesystems fsck resume shutdown)' /mnt/etc/mkinitcpio.conf
+					sed -i '/^HOOKS=/c\HOOKS=(base systemd autodetect modconf kms keyboard keymap plymouth sd-vconsole block sd-encrypt lvm2 filesystems fsck resume shutdown)' /mnt/etc/mkinitcpio.conf
 
 					arch-chroot /mnt/ mkinitcpio -p $KERNEL
 
