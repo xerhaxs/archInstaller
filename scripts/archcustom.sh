@@ -33,12 +33,14 @@ function_start_installation_guide() {
 			*)
 				whiptail --title "ERROR - Unsupported system detected!" --yesno "Your system is not officially supported by this script. It is not recommended to run this script on not officially supported systems, as it can cause damage to your installed systems or it might not work properly. If you decide to run this script anyway - you have been warned! Do you want to continue?" 32 128 3>&1 1>&2 2>&3
 				if [[ $? -eq 0 ]]; then
-						pacman -Syyu hwinfo git wget
 						function_installation_guide
+
 					elif [[ $? -eq 1 ]]; then
 						whiptail --title "MESSAGE" --msgbox "Cancelling Process since user pressed <NO>." 32 128 3>&1 1>&2 2>&3
+
 					elif [[ $? -eq 255 ]]; then
 						whiptail --title "MESSAGE" --msgbox "User pressed ESC. Exiting the script" 32 128 3>&1 1>&2 2>&3
+
 				fi
 			;;
 		esac
@@ -158,6 +160,15 @@ function_select_installation_disk() {
 	CHOSEN_DRIVE=$(whiptail --nocancel --title "Menu selected Drive" --menu "Where should Arch Linux be installed?" 32 128 16 "${DISK_OPTIONS[@]}" 3>&1 1>&2 2>&3)
 
 	echo "$CHOSEN_DRIVE"
+}
+
+function_select_disk_wipe() {
+	whiptail --title "Securely disk wipe " --yesno "Do you want to securely wipe the disk?" 32 128 3>&1 1>&2 2>&3
+	if [[ $? -eq 0 ]]; then
+			WIPE=true
+		else
+			WIPE=false
+	fi
 }
 
 ## Standard partition layout
@@ -392,12 +403,8 @@ function_installation_guide() {
 
 	function_select_kernel
 
-
 	## Test for UEFI
 	#ls /sys/firmware/efi/efivars
-
-	## Secure erasure of the drive
-	#dd if=$CHOSEN_DRIVE of=/dev/zero status=progress
 
 	function_select_hostname
 
@@ -435,6 +442,12 @@ function_installation_guide() {
 
 
 			### Hardware Configuration
+			## Wipe the disk
+			if [[ $WIPE = true ]]; then
+				echo "Wiping disk..."
+				dd if=/dev/zero of=$CHOSEN_DRIVE status=progress
+			fi
+
 			## Set the kernel type
 			if [ $CHOSEN_KERNEL == "Normal" ]; then
 					KERNELPKGS="linuxPkgs.txt"

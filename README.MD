@@ -36,7 +36,7 @@ chmod +x archcustom.sh
   - [X] Make “cancel” button in menu useful
   - [X] Change radio lists to menu lists
 - [ ] Add support for MBR and BIOS systems
-- [ ] Add option to securely format the installation drive
+- [X] Add option to securely wipe the installation drive
 - [ ] Add GPU support for intel
 - [ ] Enable fast boot (skip grub menu)
 - [ ] Remove the second password entering process for FDE with boot
