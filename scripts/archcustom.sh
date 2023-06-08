@@ -12,7 +12,7 @@
 
 ## Function for sartup message
 function_startup_message() {
-	whiptail --title "Start installation" --msgbox "This script will guide you through the installation of Arch Linux with customized settings.	Notice, that this script will only work on Arch Linux (and maybe arch-based systems)." 32 128 3>&1 1>&2 2>&3
+	whiptail --nocancel --title "Start installation" --msgbox "This script will guide you through the installation of Arch Linux with customized settings.	Notice, that this script will only work on Arch Linux (and maybe arch-based systems)." 32 128 3>&1 1>&2 2>&3
 }
 
 ## Function to start the installation guide
@@ -58,16 +58,16 @@ function_kbd_load() {
 		KBD_OPTIONS+=("$KBD_LINE" "")
 	done < <(localectl list-keymaps)
 
-	CHOSEN_KBD_LAYOUT=$(whiptail --title "Keyboard Layout" --menu "Pick your keyboard layout (This keyboard layout will be used during the installation process and on the new system)." 32 128 16 "${KBD_OPTIONS[@]}" 3>&1 1>&2 2>&3)
+	CHOSEN_KBD_LAYOUT=$(whiptail --nocancel --title "Keyboard Layout" --menu "Pick your keyboard layout (This keyboard layout will be used during the installation process and on the new system)." 32 128 16 "${KBD_OPTIONS[@]}" 3>&1 1>&2 2>&3)
 	loadkeys $CHOSEN_KBD_LAYOUT
 }
 
 ## Function to detect and set a password
 function_password() {
 	function_set_password() {
-		PASSWORD=$(whiptail --title "Set password" --passwordbox "Chose a strong password." 32 128 3>&1 1>&2 2>&3)
+		PASSWORD=$(whiptail --nocancel --title "Set password" --passwordbox "Chose a strong password." 32 128 3>&1 1>&2 2>&3)
 
-		PASSWORD_CHECK=$(whiptail --title "Confirm password" --passwordbox "Type your password again to confirm." 32 128 3>&1 1>&2 2>&3)
+		PASSWORD_CHECK=$(whiptail --nocancel --title "Confirm password" --passwordbox "Type your password again to confirm." 32 128 3>&1 1>&2 2>&3)
 	}
 
 	function_set_password
@@ -78,7 +78,7 @@ function_password() {
 			PASSWORD_SET=true
 			echo "$PASSWORD"
 		else
-			whiptail --title "Incorrect Password" --msgbox "The passwords do not match. Please try again." 32 128 3>&1 1>&2 2>&3
+			whiptail --nocancel --title "Incorrect Password" --msgbox "The passwords do not match. Please try again." 32 128 3>&1 1>&2 2>&3
 			function_set_password
 		fi
 	done
@@ -93,7 +93,7 @@ function_detect_microcode() {
 			echo "Add intel-ucode to installation query, because Intel CPU has been found..."
 			CPU_MICROCODE="intel-ucode"
 		else
-			whiptail --title "Hardware Configuration" --msgbox "Unknown CPU-Architektur detected. Continue installation without Microcode." 32 128 3>&1 1>&2 2>&3
+			whiptail --nocancel --title "Hardware Configuration" --msgbox "Unknown CPU-Architektur detected. Continue installation without Microcode." 32 128 3>&1 1>&2 2>&3
 			CPU_MICROCODE="amd-ucode intel-ucode"
 	fi
 }
@@ -106,7 +106,7 @@ function_detect_gpu() {
 			MODULES_DRIVER="sed -i 's/MODULES=(ext4 btusb)/MODULES=(ext4 btusb amdgpu)/g' /etc/mkinitcpio.conf"
 
 		elif lspci | grep VGA | grep "NVIDIA"; then
-				CHOSEN_NVIDIA_DRIVER=$(whiptail --title "Nvidia driver selection" --menu "Do you want to use proprietary or open-source drivers for your Nvidia card?" 32 128 2 \
+				CHOSEN_NVIDIA_DRIVER=$(whiptail --nocancel --title "Nvidia driver selection" --menu "Do you want to use proprietary or open-source drivers for your Nvidia card?" 32 128 2 \
 				"Proprietary" "Much better performance" \
 				"Open-Source" "Free and open-source" 3>&1 1>&2 2>&3)
 
@@ -124,13 +124,13 @@ function_detect_gpu() {
 				# add support for qemu hardware
 				#MODULES_DRIVER="sed -i 's/MODULES=(ext4 btusb)/MODULES=(ext4 btusb qxl bochs_drm virtio-gpu virtio virtio_scsi virtio_blk virtio_pci virtio_net virtio_ring)/g' /etc/mkinitcpio.conf"
 		else
-			whiptail --title "Hardware Configuration" --msgbox "Unknown GPU detected. Continue installation without GPU-Drivers" 32 128 3>&1 1>&2 2>&3
+			whiptail --nocancel --title "Hardware Configuration" --msgbox "Unknown GPU detected. Continue installation without GPU-Drivers" 32 128 3>&1 1>&2 2>&3
 	fi
 }
 
 ## Function to set the system security level
 function_select_security() {
-	CHOSEN_SECURITY=$(whiptail --title "System configuration" --menu "What security option do you prefer?" 32 128 4 \
+	CHOSEN_SECURITY=$(whiptail --nocancel --title "System configuration" --menu "What security option do you prefer?" 32 128 4 \
 	"Basic" 					"The system will be installed without any further tweaks for more security." \
 	"FDE" 		"The system will be installed with Full-Disk-Encryption." \
 	"FDE+BOOT"	"The system will be installed with Full-Disk-Encryption and the boot partition will be encrypted." 3>&1 1>&2 2>&3)
@@ -138,7 +138,7 @@ function_select_security() {
 
 ## Kernel and system configuration
 function_select_kernel() {
-	CHOSEN_KERNEL=$(whiptail --title "Kernel and System configuration" --menu "Which Kernel option do you prefer?" 32 128 4 \
+	CHOSEN_KERNEL=$(whiptail --nocancel --title "Kernel and System configuration" --menu "Which Kernel option do you prefer?" 32 128 4 \
 	"Normal" 	"The normal Kernel will be used." \
 	"Zen" 		"The Zen-Kernel will be used. Some tweaks for better performence will be made." \
 	"LTS"		"The LTS-Kernel will be used. This kernel is better for stable systems." \
@@ -155,7 +155,7 @@ function_select_installation_disk() {
 		DISK_OPTIONS+=("/dev/$DISK" "$DISK_SIZE")
 	done
 
-	CHOSEN_DRIVE=$(whiptail --title "Menu selected Drive" --menu "Where should Arch Linux be installed?" 32 128 16 "${DISK_OPTIONS[@]}" 3>&1 1>&2 2>&3)
+	CHOSEN_DRIVE=$(whiptail --nocancel --title "Menu selected Drive" --menu "Where should Arch Linux be installed?" 32 128 16 "${DISK_OPTIONS[@]}" 3>&1 1>&2 2>&3)
 
 	echo "$CHOSEN_DRIVE"
 }
@@ -310,7 +310,7 @@ function_partition_hardened() {
 
 ## Function to set the hostname
 function_select_hostname() {
-	HOSTNAME=$(whiptail --title "Set Hostname" --inputbox "Chose the Hostname of the computer." 32 128 3>&1 1>&2 2>&3)
+	HOSTNAME=$(whiptail --nocancel --title "Set Hostname" --inputbox "Chose the Hostname of the computer." 32 128 3>&1 1>&2 2>&3)
 	echo "Hostname: $HOSTNAME"
 }
 
@@ -320,7 +320,7 @@ function_select_timezone() {
     TIMEZONELIST=$(timedatectl list-timezones)
 
     # Show menulist
-    TIMEZONE=$(whiptail --title "Timezone" --menu "Choose your timezone:" 32 128 16 \
+    TIMEZONE=$(whiptail --nocancel --title "Timezone" --menu "Choose your timezone:" 32 128 16 \
     $(for TZ in $TIMEZONELIST; do \
         echo $TZ \"\"; \
     done) 3>&1 1>&2 2>&3)
@@ -346,19 +346,21 @@ function_system_local() {
 	done
 
 	# Generate the whiptail menu and save the results as an array
-	SELECTED_LOCALE=$(whiptail --title "Select Locale" --radiolist "Choose your locale:" 20 78 10 "${OPTIONS[@]}" 3>&1 1>&2 2>&3)
+	SELECTED_LOCALE=$(whiptail --nocancel --title "Select Locale" --radiolist "Choose your locale:" 20 78 10 "${OPTIONS[@]}" 3>&1 1>&2 2>&3)
 
 	echo "Locale set to $SELECTED_LOCALE"
 }
 
 ## Function to set the root credentials
 function_select_root_credentials() {
+	whiptail --nocancel --title "Root password" --msgbox "In the following, set a secure root password." 32 128 3>&1 1>&2 2>&3
 	ROOTPASS=$(function_password)
 }
 
 ## Function to set the user credentials
 function_select_user_credentials() {
-	CHROOTUSERNAME=$(whiptail --title "Create User" --inputbox "Chose your username (only lowercase letters, numbers and no spaces or special characters)" 32 128 3>&1 1>&2 2>&3)
+	CHROOTUSERNAME=$(whiptail --nocancel --title "Create User" --inputbox "Chose your username (only lowercase letters, numbers and no spaces or special characters) and set a secure password." 32 128 3>&1 1>&2 2>&3)
+
 	USERPASS=$(function_password)
 }
 

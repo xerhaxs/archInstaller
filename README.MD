@@ -32,9 +32,9 @@ chmod +x archcustom.sh
 - [ ] Add automatic secure boot installation support
 - [ ] Make the installation of the user space changes automatic
 - [ ] Add a dotfile-API / Add my custom dotfiles
-- [ ] Optimize the UX / UI of the script
-  - [ ] Make “cancel” button in menu useful
-  - [ ] Change radio lists to menu lists
+- [X] Optimize the UX / UI of the script
+  - [X] Make “cancel” button in menu useful
+  - [X] Change radio lists to menu lists
 - [ ] Add support for MBR and BIOS systems
 - [ ] Add option to securely format the installation drive
 - [ ] Add GPU support for intel
