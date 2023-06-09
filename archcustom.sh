@@ -10,36 +10,36 @@
 
 
 ## Core system utils
-corePkgs="acpid avahi btrfs-progs bluez bluez-utils cups dhcp dosfstools efibootmgr firewalld fuse2 git gptfdisk grub htop iftop lshw lvm2 mtools neofetch networkmanager os-prober pacman-contrib plymouth sudo vim wget"
+corePkgs=(acpid avahi btrfs-progs bluez bluez-utils cups dhcp dosfstools efibootmgr firewalld fuse2 git gptfdisk grub htop iftop lshw lvm2 mtools neofetch networkmanager os-prober pacman-contrib plymouth sudo vim wget)
 
 ## Kernel
-linuxPkgs="base base-devel linux linux-firmware linux-headers"
+linuxPkgs=(base base-devel linux linux-firmware linux-headers)
 
-linuxZenPkgs="base base-devel linux-zen linux-firmware linux-zen-headers"
+linuxZenPkgs=(base base-devel linux-zen linux-firmware linux-zen-headers)
 
-linuxLtsPkgs="base base-devel linux-lts linux-firmware linux-lts-headers"
+linuxLtsPkgs=(base base-devel linux-lts linux-firmware linux-lts-headers)
 
-linuxHardenedPkgs="base base-devel linux-hardened linux-firmware linux-hardened-headers"
+linuxHardenedPkgs=(base base-devel linux-hardened linux-firmware linux-hardened-headers)
 
-waylandPkgs="wayland lib32-wayland wayland-utils wayland-protocols egl-wayland xorg-xwayland"
+waylandPkgs=(wayland lib32-wayland wayland-utils wayland-protocols egl-wayland xorg-xwayland)
 
 ## Grafical
-x11Pkgs="xorg xorg-server xorg-xinit iio-sensor-proxy fprintd"
+x11Pkgs=(xorg xorg-server xorg-xinit iio-sensor-proxy fprintd)
 
 ## Driver
-amdCpuPkgs="amd-ucode"
+amdCpuPkgs=(amd-ucode)
 
-amdGpuPkgs="mesa lib32-mesa xf-86-video-amdgpu vulkan-radeon lib32-vulkan-radeon libva-mesa-driver lib32-libva-mesa-driver vulkan-headers vulkan-icd-loader lib32-vulkan-icd-loader"
+amdGpuPkgs=(mesa lib32-mesa xf-86-video-amdgpu vulkan-radeon lib32-vulkan-radeon libva-mesa-driver lib32-libva-mesa-driver vulkan-headers vulkan-icd-loader lib32-vulkan-icd-loader)
 
-intelCpuPkgs="intel-ucode"
+intelCpuPkgs=(intel-ucode)
 
-intelGpuPkgs="mesa lib32-mesa xf86-video-intel vulkan-intel lib32-vulkan-intel intel-gpu-tools"
+intelGpuPkgs=(mesa lib32-mesa xf86-video-intel vulkan-intel lib32-vulkan-intel intel-gpu-tools)
 
-nvidiaOpenGpuPkgs="xf86-video-nouveau mesa lib32-mesa vulkan-icd-loader lib32-vulkan-icd-loader"
+nvidiaOpenGpuPkgs=(xf86-video-nouveau mesa lib32-mesa vulkan-icd-loader lib32-vulkan-icd-loader)
 
-nvidiaClosedGpuPkgs="nvidia nvidia-settings nvidia-utils lib32-nvidia-utils opencl-nvidia cuda vulkan-icd-loader lib32-vulkan-icd-loader"
+nvidiaClosedGpuPkgs=(nvidia nvidia-settings nvidia-utils lib32-nvidia-utils opencl-nvidia cuda vulkan-icd-loader lib32-vulkan-icd-loader)
 
-vmGuestPkgs="qemu-guest-agent"
+vmGuestPkgs=(qemu-guest-agent)
 
 
 
@@ -149,7 +149,7 @@ function_detect_microcode() {
 function_detect_gpu() {
 	if lspci | grep VGA | grep "AMD"; then
 			echo "Add AMD-driver to installation query, because AMD GPU has been found..."
-			GPU_DRIVER="$amdGpuPkgs"
+			GPU_DRIVER="${amdGpuPkgs[@]}"
 			MODULES_DRIVER="sed -i 's/MODULES=(ext4 btusb)/MODULES=(ext4 btusb amdgpu)/g' /etc/mkinitcpio.conf"
 
 		elif lspci | grep VGA | grep "NVIDIA"; then
@@ -161,11 +161,11 @@ function_detect_gpu() {
 
 			if [[ $CHOSEN_NVIDIA_DRIVER == "Proprietary" ]]; then
 					echo "Add proprietary nvidia driver to installation query..."
-					GPU_DRIVER="$nvidiaClosedGpuPkgs"
+					GPU_DRIVER="${nvidiaClosedGpuPkgs[@]}"
 					MODULES_DRIVER="sed -i 's/MODULES=(ext4 btusb)/MODULES=(ext4 btusb nvidia nvidia_modeset nvidia_uvm nvidia_drm)/g' /etc/mkinitcpio.conf"
 				else
 					echo "Add open-source nvidia driver to installation query..."
-					GPU_DRIVER="$nvidiaOpenGpuPkgs"
+					GPU_DRIVER="${nvidiaOpenGpuPkgs[@]}"
 					MODULES_DRIVER="sed -i 's/MODULES=(ext4 btusb)/MODULES=(ext4 btusb nouveau)/g' /etc/mkinitcpio.conf"
 			fi
 				# add support for qemu hardware
@@ -502,19 +502,19 @@ function_installation_guide() {
 
 			## Set the kernel type
 			if [[ $CHOSEN_KERNEL == "Normal" ]]; then
-					KERNELPKGS="$linuxPkgs"
+					KERNELPKGS="${linuxPkgs[@]}"
 					KERNEL="linux"
 				
 				elif [[ $CHOSENCHOSEN_KERNEL == "Zen" ]]; then
-					KERNELPKGS="$linuxZenPkgs"
+					KERNELPKGS="${linuxZenPkgs[@]}"
 					KERNEL="linux-zen"
 
 				elif [[ $CHOSEN_KERNEL == "LTS" ]]; then
-					KERNELPKGS="$linuxLtsPkgs"
+					KERNELPKGS="${linuxLtsPkgs[@]}"
 					KERNEL="linux-lts"
 
 				elif [[ $CHOSEN_KERNEL == "Hardened" ]]; then
-					KERNELPKGS="$linuxHardenedPkgs"
+					KERNELPKGS="${linuxHardenedPkgs[@]}"
 					KERNEL="linux-hardened"
 			fi
 
@@ -523,7 +523,7 @@ function_installation_guide() {
 					function_partition_basic
 
 					pacstrap /mnt $KERNELPKGS
-					pacstrap /mnt $corePkgs
+					pacstrap /mnt ${corePkgs[@]}
 
 					# Update mkinitcpio.conf
 					sed -i 's/MODULES=()/MODULES=(ext4 btusb)/g' /mnt/etc/mkinitcpio.conf
@@ -550,7 +550,7 @@ function_installation_guide() {
 					function_partition_secured
 
 					pacstrap /mnt $KERNELPKGS
-					pacstrap /mnt $corePkgs
+					pacstrap /mnt ${corePkgs[@]}
 					
 					# Update mkinitcpio.conf
 					sed -i 's/MODULES=()/MODULES=(ext4 btusb)/g' /mnt/etc/mkinitcpio.conf
@@ -581,7 +581,7 @@ function_installation_guide() {
 					function_partition_hardened
 
 					pacstrap /mnt $KERNELPKGS
-					pacstrap /mnt $corePkgs
+					pacstrap /mnt ${corePkgs[@]}
 
 					# Update mkinitcpio.conf
 					sed -i 's/MODULES=()/MODULES=(ext4 btusb)/g' /mnt/etc/mkinitcpio.conf
@@ -674,8 +674,8 @@ function_installation_guide() {
 			$MODULES_DRIVER
 
 			## Install Compositor /  Window System
-			pacstrap /mnt $waylandPkgs
-			pacstrap /mnt $x11Pkgs
+			pacstrap /mnt ${waylandPkgs[@]}
+			pacstrap /mnt ${x11Pkgs[@]}
 			arch-chroot /mnt/ localectl set-x11-keymap "$CHOSEN_KBD_LAYOUT"
 
 			## Setup Firewalld as system wide firewall
