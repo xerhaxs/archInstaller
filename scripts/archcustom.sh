@@ -120,8 +120,8 @@ function_password() {
 	function_set_password
 	PASSWORD_SET=false
 
-	while [ $PASSWORD_SET = false ]; do
-		if [ $PASSWORD == $PASSWORD_CHECK ]; then
+	while [[ $PASSWORD_SET = false ]]; do
+		if [[ $PASSWORD == $PASSWORD_CHECK ]]; then
 			PASSWORD_SET=true
 			echo "$PASSWORD"
 		else
@@ -159,7 +159,7 @@ function_detect_gpu() {
 
 				echo $CHOSEN_NVIDIA_DRIVER
 
-			if [ $CHOSEN_NVIDIA_DRIVER == "Proprietary" ]; then
+			if [[ $CHOSEN_NVIDIA_DRIVER == "Proprietary" ]]; then
 					echo "Add proprietary nvidia driver to installation query..."
 					GPU_DRIVER="$nvidiaClosedGpuPkgs"
 					MODULES_DRIVER="sed -i 's/MODULES=(ext4 btusb)/MODULES=(ext4 btusb nvidia nvidia_modeset nvidia_uvm nvidia_drm)/g' /etc/mkinitcpio.conf"
@@ -496,25 +496,25 @@ function_installation_guide() {
 			fi
 
 			## Set the kernel type
-			if [ $CHOSEN_KERNEL == "Normal" ]; then
+			if [[ $CHOSEN_KERNEL == "Normal" ]]; then
 					KERNELPKGS="$linuxPkgs"
 					KERNEL="linux"
 				
-				elif [ $CHOSENCHOSEN_KERNEL == "Zen" ]; then
+				elif [[ $CHOSENCHOSEN_KERNEL == "Zen" ]]; then
 					KERNELPKGS="$linuxZenPkgs"
 					KERNEL="linux-zen"
 
-				elif [ $CHOSEN_KERNEL == "LTS" ]; then
+				elif [[ $CHOSEN_KERNEL == "LTS" ]]; then
 					KERNELPKGS="$linuxLtsPkgs"
 					KERNEL="linux-lts"
 
-				elif [ $CHOSEN_KERNEL == "Hardened" ]; then
+				elif [[ $CHOSEN_KERNEL == "Hardened" ]]; then
 					KERNELPKGS="$linuxHardenedPkgs"
 					KERNEL="linux-hardened"
 			fi
 
 			## Set and install the security options and the selected kernel
-			if [ $CHOSEN_SECURITY == "Basic" ]; then
+			if [[ $CHOSEN_SECURITY == "Basic" ]]; then
 					function_partition_basic
 
 					pacstrap /mnt $KERNELPKGS
@@ -541,7 +541,7 @@ function_installation_guide() {
 
 					arch-chroot /mnt/ grub-mkconfig -o /boot/grub/grub.cfg
 
-				elif [ $CHOSEN_SECURITY == "FDE" ]; then
+				elif [[ $CHOSEN_SECURITY == "FDE" ]]; then
 					function_partition_secured
 
 					pacstrap /mnt $KERNELPKGS
@@ -572,7 +572,7 @@ function_installation_guide() {
 
 					arch-chroot /mnt/ grub-mkconfig -o /boot/grub/grub.cfg
 
-				elif [ $CHOSEN_SECURITY == "FDE+BOOT" ]; then
+				elif [[ $CHOSEN_SECURITY == "FDE+BOOT" ]]; then
 					function_partition_hardened
 
 					pacstrap /mnt $KERNELPKGS
