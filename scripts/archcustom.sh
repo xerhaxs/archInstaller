@@ -9,20 +9,37 @@
 ###
 
 
-
+## Core system utils
 corePkgs="acpid avahi btrfs-progs bluez bluez-utils cups dhcp dosfstools efibootmgr firewalld fuse2 git gptfdisk grub htop iftop lshw lvm2 mtools neofetch networkmanager os-prober pacman-contrib plymouth sudo vim wget"
 
-linux-hardenedPkgs="base base-devel linux-hardened linux-firmware linux-hardened-headers"
-
-linux-ltsPkgs="base base-devel linux-lts linux-firmware linux-lts-headers"
-
-linux-zenPkgs="base base-devel linux-zen linux-firmware linux-zen-headers"
-
+## Kernel
 linuxPkgs="base base-devel linux linux-firmware linux-headers"
+
+linuxZenPkgs="base base-devel linux-zen linux-firmware linux-zen-headers"
+
+linuxLtsPkgs="base base-devel linux-lts linux-firmware linux-lts-headers"
+
+linuxHardenedPkgs="base base-devel linux-hardened linux-firmware linux-hardened-headers"
 
 waylandPkgs="wayland lib32-wayland wayland-utils wayland-protocols egl-wayland xorg-xwayland"
 
+## Grafical
 x11Pkgs="xorg xorg-server xorg-xinit iio-sensor-proxy fprintd"
+
+## Driver
+amdCpuPkgs="amd-ucode"
+
+amdGpuPkgs="mesa lib32-mesa xf-86-video-amdgpu vulkan-radeon lib32-vulkan-radeon libva-mesa-driver lib32-libva-mesa-driver vulkan-headers vulkan-icd-loader lib32-vulkan-icd-loader"
+
+intelCpuPkgs="intel-ucode"
+
+intelGpuPkgs="mesa lib32-mesa xf86-video-intel vulkan-intel lib32-vulkan-intel intel-gpu-tools"
+
+nvidiaOpenGpuPkgs="xf86-video-nouveau mesa lib32-mesa vulkan-icd-loader lib32-vulkan-icd-loader"
+
+nvidiaClosedGpuPkgs="nvidia nvidia-settings nvidia-utils lib32-nvidia-utils opencl-nvidia cuda vulkan-icd-loader lib32-vulkan-icd-loader"
+
+vmGuestPkgs="qemu-guest-agent"
 
 
 
@@ -132,7 +149,7 @@ function_detect_microcode() {
 function_detect_gpu() {
 	if lspci | grep VGA | grep "AMD"; then
 			echo "Add AMD-driver to installation query, because AMD GPU has been found..."
-			GPU_DRIVER="pkgLists/driverLists/amdGpuPkgs.txt"
+			GPU_DRIVER="$amdGpuPkgs"
 			MODULES_DRIVER="sed -i 's/MODULES=(ext4 btusb)/MODULES=(ext4 btusb amdgpu)/g' /etc/mkinitcpio.conf"
 
 		elif lspci | grep VGA | grep "NVIDIA"; then
@@ -144,11 +161,11 @@ function_detect_gpu() {
 
 			if [ $CHOSEN_NVIDIA_DRIVER == "Proprietary" ]; then
 					echo "Add proprietary nvidia driver to installation query..."
-					GPU_DRIVER="pkgLists/driverLists/nvidiaClosedGpuPkgs.txt"
+					GPU_DRIVER="$nvidiaClosedGpuPkgs"
 					MODULES_DRIVER="sed -i 's/MODULES=(ext4 btusb)/MODULES=(ext4 btusb nvidia nvidia_modeset nvidia_uvm nvidia_drm)/g' /etc/mkinitcpio.conf"
 				else
 					echo "Add open-source nvidia driver to installation query..."
-					GPU_DRIVER="pkgLists/driverLists/nvidiaOpenGpuPkgs.txt"
+					GPU_DRIVER="$nvidiaOpenGpuPkgs"
 					MODULES_DRIVER="sed -i 's/MODULES=(ext4 btusb)/MODULES=(ext4 btusb nouveau)/g' /etc/mkinitcpio.conf"
 			fi
 				# add support for qemu hardware
@@ -480,19 +497,19 @@ function_installation_guide() {
 
 			## Set the kernel type
 			if [ $CHOSEN_KERNEL == "Normal" ]; then
-					KERNELPKGS="linuxPkgs.txt"
+					KERNELPKGS="$linuxPkgs"
 					KERNEL="linux"
 				
 				elif [ $CHOSENCHOSEN_KERNEL == "Zen" ]; then
-					KERNELPKGS="linux-ltsPkgs.txt"
-					KERNEL="linux-lts"
-
-				elif [ $CHOSEN_KERNEL == "LTS" ]; then
-					KERNELPKGS="linux-zenPkgs.txt"
+					KERNELPKGS="$linuxZenPkgs"
 					KERNEL="linux-zen"
 
+				elif [ $CHOSEN_KERNEL == "LTS" ]; then
+					KERNELPKGS="$linuxLtsPkgs"
+					KERNEL="linux-lts"
+
 				elif [ $CHOSEN_KERNEL == "Hardened" ]; then
-					KERNELPKGS="linux-hardenedPkgs.txt"
+					KERNELPKGS="$linuxHardenedPkgs"
 					KERNEL="linux-hardened"
 			fi
 
@@ -500,8 +517,8 @@ function_installation_guide() {
 			if [ $CHOSEN_SECURITY == "Basic" ]; then
 					function_partition_basic
 
-					pacstrap /mnt - < pkgLists/systemLists/$KERNELPKGS
-					pacstrap /mnt - < pkgLists/systemLists/corePkgs.txt
+					pacstrap /mnt $KERNELPKGS
+					pacstrap /mnt $corePkgs
 
 					# Update mkinitcpio.conf
 					sed -i 's/MODULES=()/MODULES=(ext4 btusb)/g' /mnt/etc/mkinitcpio.conf
@@ -527,8 +544,8 @@ function_installation_guide() {
 				elif [ $CHOSEN_SECURITY == "FDE" ]; then
 					function_partition_secured
 
-					pacstrap /mnt - < pkgLists/systemLists/$KERNELPKGS
-					pacstrap /mnt - < pkgLists/systemLists/corePkgs.txt
+					pacstrap /mnt $KERNELPKGS
+					pacstrap /mnt $corePkgs
 					
 					# Update mkinitcpio.conf
 					sed -i 's/MODULES=()/MODULES=(ext4 btusb)/g' /mnt/etc/mkinitcpio.conf
@@ -558,8 +575,8 @@ function_installation_guide() {
 				elif [ $CHOSEN_SECURITY == "FDE+BOOT" ]; then
 					function_partition_hardened
 
-					pacstrap /mnt - < pkgLists/systemLists/$KERNELPKGS
-					pacstrap /mnt - < pkgLists/systemLists/corePkgs.txt
+					pacstrap /mnt $KERNELPKGS
+					pacstrap /mnt $corePkgs
 
 					# Update mkinitcpio.conf
 					sed -i 's/MODULES=()/MODULES=(ext4 btusb)/g' /mnt/etc/mkinitcpio.conf
@@ -652,8 +669,8 @@ function_installation_guide() {
 			$MODULES_DRIVER
 
 			## Install Compositor /  Window System
-			arch-chroot /mnt/ pacman -S --needed --noconfirm - < pkgLists/systemLists/waylandPkgs.txt
-			arch-chroot /mnt/ pacman -S --needed --noconfirm - < pkgLists/systemLists/x11Pkgs.txt
+			arch-chroot /mnt/ pacman -S --needed --noconfirm $waylandPkgs
+			arch-chroot /mnt/ pacman -S --needed --noconfirm $x11Pkgs
 			arch-chroot /mnt/ localectl set-x11-keymap "$CHOSEN_KBD_LAYOUT"
 
 			## Setup Firewalld as system wide firewall
