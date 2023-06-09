@@ -41,7 +41,7 @@ nvidiaClosedGpuPkgs="nvidia nvidia-settings nvidia-utils lib32-nvidia-utils open
 
 vmGuestPkgs="qemu-guest-agent"
 
-
+https://raw.githubusercontent.com/xerhaxs/archInstaller/master/scripts/archcustom.sh
 
 ###
 ### ---- End: Define programs for this installation script ----
@@ -281,7 +281,7 @@ function_partition_secured() {
 	# Create root + home volume
 	pvcreate /dev/mapper/lvm
 	vgcreate crypt /dev/mapper/lvm
-	lvcreate -l 25%FREE -n root crypt
+	lvcreate -l 40%FREE -n root crypt
 	lvcreate -l 100%FREE -n home crypt
 
 	# Init crypt root and crypt home
@@ -338,7 +338,7 @@ function_partition_hardened() {
 	# Create root + home volume
 	pvcreate /dev/mapper/lvm
 	vgcreate crypt /dev/mapper/lvm
-	lvcreate -l 25%FREE -n root crypt
+	lvcreate -l 40%FREE -n root crypt
 	lvcreate -l 100%FREE -n home crypt
 
 	# Init crypt root and crypt home
