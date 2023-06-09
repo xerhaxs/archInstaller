@@ -23,7 +23,7 @@ CHOSEN_DRIVE=/dev/vda
 	fi
 	
 	# Encrypt second partition
-	cryptsetup --cipher aes-xts-plain64 --verify-passphrase --key-size 512 --hash sha512 luksFormat $CRYPT_DRIVE --label CRYPTDRIVE
+	cryptsetup --cipher aes-xts-plain64 --key-size 512 --hash sha512 luksFormat $CRYPT_DRIVE --label CRYPTDRIVE
 
 	# Open encrypted partition
 	cryptsetup luksOpen $CRYPT_DRIVE lvm

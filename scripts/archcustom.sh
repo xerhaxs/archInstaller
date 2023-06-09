@@ -2,7 +2,7 @@
 
 ## This is an installation script for a custom Arch Linux. It is modified for my personal needs. Feel free to use or customize!
 
-
+# https://raw.githubusercontent.com/xerhaxs/archInstaller/master/scripts/archcustom.sh
 
 ###
 ### ---- Start: Define programs for this installation script ----
@@ -41,7 +41,7 @@ nvidiaClosedGpuPkgs="nvidia nvidia-settings nvidia-utils lib32-nvidia-utils open
 
 vmGuestPkgs="qemu-guest-agent"
 
-https://raw.githubusercontent.com/xerhaxs/archInstaller/master/scripts/archcustom.sh
+
 
 ###
 ### ---- End: Define programs for this installation script ----
