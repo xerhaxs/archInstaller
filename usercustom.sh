@@ -9,6 +9,21 @@
 ###
 
 
+## Desktop manager list
+# Window manager
+awesomePkgs="awesome"
+
+swayPkgs="sway swaybg swayidle swaylock wf-recorder way-accel-rotate-git sway-alttab-bin sway-audio-idle-inhibit-git swaylock-blur-multimonitor-git swaysettings-git xdg-desktop-portal xdg-desktop-portal-gtk xdg-desktop-portal-wlr"
+
+# Desktop enviroments
+
+gnomePkgs="adw-gtk3 clamtk-gnome dconf-editor endeavour gedit gnome-appfolders-manager gnome-applets gnome-disk-utility  gnome-power-manager gnome-shell gnome-shell-extension-appindicator gnome-shell-extension-caffeine gnome-shell-extension-clipboard-indicator gnome-shell-extension-gamemode gnome-shell-extension-gsconnect gnome-shell-extension-gtk4-desktop-icons-ng gnome-shell-extension-media-controls gnome-shell-extension-privacy-menu gnome-shell-extension-sound-output-device-chooser gnome-shell-extension-tiling-assistant gnome-shell-extension-tray-icons-reloaded gnome-shell-extension-vitals gnome-shell-extension-x11gestures gnome-terminal gnome-themes-extra gnome-tweaks gnome-usage gnome-usage xdg-desktop-portal xdg-desktop-portal-gnome xdg-desktop-portal-gtk"
+
+plasmaPkgs=""
+
+xfcePkgs="xfce4 xfce4-goodies"
+
+# Login manager
 
 systemPkgs="alsa archiso backintime calf cantarell-fonts cifs-utils clamtk libebur128 libpamac-full-git lsp-plugins networkmanager-openvpn nlohmann-json nm-connection-editor ntfs-3g pamac-all-git powerline pv rclone-browser rnnoise rubberband timeshift ttf-dejavu ttf-liberation ttf-meslo-nerd zam-plugins zita-convolver zsh zsh-autosuggestions zsh-completions zsh-history-substring-search zsh-syntax-highlighting zsh-theme-powerlevel10k"
 

@@ -667,15 +667,15 @@ function_installation_guide() {
 			#cp /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.backup
 
 			## Install CPU Microcode
-			arch-chroot /mnt/ pacman -S --needed --noconfirm $CPU_MICROCODE
+			pacstrap /mnt $CPU_MICROCODE
 
 			## Install / Set GPU Driver
-			arch-chroot /mnt/ pacman -S --needed --noconfirm $GPU_DRIVER
+			pacstrap /mnt $GPU_DRIVER
 			$MODULES_DRIVER
 
 			## Install Compositor /  Window System
-			arch-chroot /mnt/ pacman -S --needed --noconfirm $waylandPkgs
-			arch-chroot /mnt/ pacman -S --needed --noconfirm $x11Pkgs
+			pacstrap /mnt $waylandPkgs
+			pacstrap /mnt $x11Pkgs
 			arch-chroot /mnt/ localectl set-x11-keymap "$CHOSEN_KBD_LAYOUT"
 
 			## Setup Firewalld as system wide firewall
