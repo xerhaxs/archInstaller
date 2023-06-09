@@ -181,6 +181,11 @@ function_select_security() {
 	"Basic" 					"The system will be installed without any further tweaks for more security." \
 	"FDE" 		"The system will be installed with Full-Disk-Encryption." \
 	"FDE+BOOT"	"The system will be installed with Full-Disk-Encryption and the boot partition will be encrypted." 3>&1 1>&2 2>&3)
+
+	if [[ $CHOSEN_SECURITY == "FDE" ]] || [[ $CHOSEN_SECURITY = "FDE+BOOT" ]]; then
+			whiptail --nocancel --title "Disk password" --msgbox "In the following, set a secure password for the installation disk." 32 128 3>&1 1>&2 2>&3
+			DISKPASS=$(function_password)
+	fi
 }
 
 ## Kernel and system configuration
@@ -273,10 +278,10 @@ function_partition_secured() {
 	fi
 	
 	# Encrypt second partition
-	cryptsetup --cipher aes-xts-plain64 --verify-passphrase --key-size 512 --hash sha512 luksFormat $CRYPT_DRIVE --label CRYPTDRIVE
+	echo "$DISKPASS" | cryptsetup --batch-mode --cipher aes-xts-plain64 --key-size 512 --hash sha512 luksFormat $CRYPT_DRIVE --label CRYPTDRIVE
 
 	# Open encrypted partition
-	cryptsetup luksOpen $CRYPT_DRIVE lvm
+	echo "$DISKPASS" | cryptsetup luksOpen $CRYPT_DRIVE lvm
 
 	# Create root + home volume
 	pvcreate /dev/mapper/lvm
@@ -330,10 +335,10 @@ function_partition_hardened() {
 	fi
 	
 	# Encrypt second partition
-	cryptsetup --cipher aes-xts-plain64 --verify-passphrase --key-size 512 --hash sha512 luksFormat --type luks1 $CRYPT_DRIVE --label CRYPTDRIVE
+	echo "$DISKPASS" | cryptsetup --batch-mode --cipher aes-xts-plain64 --key-size 512 --hash sha512 luksFormat --type luks1 $CRYPT_DRIVE --label CRYPTDRIVE
 
 	# Open encrypted partition
-	cryptsetup luksOpen $CRYPT_DRIVE lvm
+	echo "$DISKPASS" | cryptsetup luksOpen $CRYPT_DRIVE lvm
 
 	# Create root + home volume
 	pvcreate /dev/mapper/lvm
