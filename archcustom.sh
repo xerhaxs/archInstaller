@@ -149,7 +149,7 @@ function_detect_microcode() {
 function_detect_gpu() {
 	if lspci | grep VGA | grep "AMD"; then
 			echo "Add AMD-driver to installation query, because AMD GPU has been found..."
-			GPU_DRIVER="${amdGpuPkgs[@]}"
+			GPU_DRIVER=(${amdGpuPkgs[@]})
 			MODULES_DRIVER="sed -i 's/MODULES=(ext4 btusb)/MODULES=(ext4 btusb amdgpu)/g' /etc/mkinitcpio.conf"
 
 		elif lspci | grep VGA | grep "NVIDIA"; then
@@ -161,11 +161,11 @@ function_detect_gpu() {
 
 			if [[ $CHOSEN_NVIDIA_DRIVER == "Proprietary" ]]; then
 					echo "Add proprietary nvidia driver to installation query..."
-					GPU_DRIVER="${nvidiaClosedGpuPkgs[@]}"
+					GPU_DRIVER=(${nvidiaClosedGpuPkgs[@]})
 					MODULES_DRIVER="sed -i 's/MODULES=(ext4 btusb)/MODULES=(ext4 btusb nvidia nvidia_modeset nvidia_uvm nvidia_drm)/g' /etc/mkinitcpio.conf"
 				else
 					echo "Add open-source nvidia driver to installation query..."
-					GPU_DRIVER="${nvidiaOpenGpuPkgs[@]}"
+					GPU_DRIVER=(${nvidiaOpenGpuPkgs[@]})
 					MODULES_DRIVER="sed -i 's/MODULES=(ext4 btusb)/MODULES=(ext4 btusb nouveau)/g' /etc/mkinitcpio.conf"
 			fi
 				# add support for qemu hardware
@@ -502,19 +502,19 @@ function_installation_guide() {
 
 			## Set the kernel type
 			if [[ $CHOSEN_KERNEL == "Normal" ]]; then
-					KERNELPKGS="${linuxPkgs[@]}"
+					KERNELPKGS=(${linuxPkgs[@]})
 					KERNEL="linux"
 				
 				elif [[ $CHOSENCHOSEN_KERNEL == "Zen" ]]; then
-					KERNELPKGS="${linuxZenPkgs[@]}"
+					KERNELPKGS=(${linuxZenPkgs[@]})
 					KERNEL="linux-zen"
 
 				elif [[ $CHOSEN_KERNEL == "LTS" ]]; then
-					KERNELPKGS="${linuxLtsPkgs[@]}"
+					KERNELPKGS=(${linuxLtsPkgs[@]})
 					KERNEL="linux-lts"
 
 				elif [[ $CHOSEN_KERNEL == "Hardened" ]]; then
-					KERNELPKGS="${linuxHardenedPkgs[@]}"
+					KERNELPKGS=(${linuxHardenedPkgs[@]})
 					KERNEL="linux-hardened"
 			fi
 
