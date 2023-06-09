@@ -26,7 +26,7 @@ CHOSEN_DRIVE=/dev/vda
 	echo "root" | cryptsetup --batch-mode --cipher aes-xts-plain64 --key-size 512 --hash sha512 luksFormat $CRYPT_DRIVE --label CRYPTDRIVE
 
 	# Open encrypted partition
-	cryptsetup luksOpen $CRYPT_DRIVE lvm
+	echo "root" | cryptsetup luksOpen $CRYPT_DRIVE lvm
 
 	# Create root + home volume
 	pvcreate /dev/mapper/lvm
