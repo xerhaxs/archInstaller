@@ -5,6 +5,22 @@
 
 
 ###
+### ---- Start: Define programs for this installation script ----
+###
+
+
+
+systemPkgs="alsa archiso backintime calf cantarell-fonts cifs-utils clamtk libebur128 libpamac-full-git lsp-plugins networkmanager-openvpn nlohmann-json nm-connection-editor ntfs-3g pamac-all-git powerline pv rclone-browser rnnoise rubberband timeshift ttf-dejavu ttf-liberation ttf-meslo-nerd zam-plugins zita-convolver zsh zsh-autosuggestions zsh-completions zsh-history-substring-search zsh-syntax-highlighting zsh-theme-powerlevel10k"
+
+
+
+###
+### ---- End: Define programs for this installation script ----
+###
+
+
+
+###
 ### ---- Start: Define functions for this installation script ----
 ###
 

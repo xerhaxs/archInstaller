@@ -5,6 +5,34 @@
 
 
 ###
+### ---- Start: Define programs for this installation script ----
+###
+
+
+
+corePkgs="acpid avahi btrfs-progs bluez bluez-utils cups dhcp dosfstools efibootmgr firewalld fuse2 git gptfdisk grub htop iftop lshw lvm2 mtools neofetch networkmanager os-prober pacman-contrib plymouth sudo vim wget"
+
+linux-hardenedPkgs="base base-devel linux-hardened linux-firmware linux-hardened-headers"
+
+linux-ltsPkgs="base base-devel linux-lts linux-firmware linux-lts-headers"
+
+linux-zenPkgs="base base-devel linux-zen linux-firmware linux-zen-headers"
+
+linuxPkgs="base base-devel linux linux-firmware linux-headers"
+
+waylandPkgs="wayland lib32-wayland wayland-utils wayland-protocols egl-wayland xorg-xwayland"
+
+x11Pkgs="xorg xorg-server xorg-xinit iio-sensor-proxy fprintd"
+
+
+
+###
+### ---- End: Define programs for this installation script ----
+###
+
+
+
+###
 ### ---- Start: Define functions for this installation script ----
 ###
 

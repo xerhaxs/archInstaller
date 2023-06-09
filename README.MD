@@ -41,3 +41,12 @@ chmod +x archcustom.sh
 - [X] Enable fast boot (skip grub menu)
 - [ ] Remove the second password entering process for FDE with boot
 - [ ] Rewrite the locale.gen menu to make multiple languages possible
+
+- [ ] Fix Bug -> usercustom.sh do not install the custom pkgs from case esac
+- [ ] Separate language / locals option
+
+- [ ] Apply Theaming for:
+  - [ ] SDDM
+
+
+Move everything into one archcustom.sh / userchustom.sh for curl
